@@ -43,7 +43,7 @@ func setup_room(rng: RandomNumberGenerator, logic_node: LogicalNode):
 	_ensure_gateway_faces_inward(gateway_out, door_hole_out, center)
 
 func _ensure_gateway_faces_inward(gateway: Marker3D, _door_csg: CSGBox3D, room_center: Vector3) -> void:
-	# The gateway's -Z should point AWAY from room center
+	# The gateway's Z should point INTO room (orthogonal from wall)
 	var outward = -(gateway.global_position - room_center).normalized()
 	var gateway_forward = -gateway.global_transform.basis.z
 	

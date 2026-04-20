@@ -36,7 +36,7 @@ func setup_room(_rng: RandomNumberGenerator, logic_node: LogicalNode):
 		stair_mesh.mode = CSGPolygon3D.MODE_DEPTH
 		stair_mesh.depth = room_width
 		
-		# FIX: Rotera +90 grader!
+		# Rotera +90 grader för alignment
 		stair_mesh.rotation_degrees.y = 90
 		stair_mesh.position = Vector3(room_width / 2.0, 0, total_length / 2.0)
 		
