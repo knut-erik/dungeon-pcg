@@ -179,9 +179,14 @@ func _build_physical_dungeon(logic_nodes: Array[LogicalNode], rng: RandomNumberG
 					continue
 				pending_connections.append([room_a.gateway_out, room_b.gateway_in])
 
+	var room_aabbs: Array = []
+	for room in physical_rooms:
+		for local_aabb in room.get_local_aabbs():
+			room_aabbs.append(AABB(local_aabb.position + room.position, local_aabb.size))
+
 	var network := CorridorNetwork.new()
 	add_child(network)
-	network.build(pending_connections)
+	network.build(pending_connections, room_aabbs)
 
 # ==============================================================================
 # DEL 3: KOLLISIONSHJÄLPARE
