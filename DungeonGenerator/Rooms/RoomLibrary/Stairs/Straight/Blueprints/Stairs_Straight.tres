@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="RoomBlueprint" load_steps=3 format=3 uid="uid://dvvbuy7nsok2d"]
+
+[ext_resource type="PackedScene" uid="uid://c1kc8j6wdt8oo" path="res://DungeonGenerator/Rooms/RoomLibrary/Stairs/Straight/StairRoom_Straight.tscn" id="1_ud7xf"]
+[ext_resource type="Script" uid="uid://djoai4k68rbwe" path="res://DungeonGenerator/Rooms/RoomComponents/RoomBlueprint.gd" id="2_a0x3a"]
+
+[resource]
+script = ExtResource("2_a0x3a")
+room_scene = ExtResource("1_ud7xf")
+possible_tags = Array[String](["Stairs"])
+metadata/_custom_type_script = "uid://djoai4k68rbwe"

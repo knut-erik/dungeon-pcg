@@ -1,0 +1,18 @@
+[gd_scene load_steps=4 format=3 uid="uid://buhg1tfw82ury"]
+
+[ext_resource type="Script" uid="uid://dl5s4vqexjl21" path="res://DungeonGenerator/Rooms/RoomBaseline/Gateway.gd" id="1_bppv1"]
+
+[sub_resource type="PrismMesh" id="PrismMesh_ph3e8"]
+size = Vector3(0.2, 0.2, 0.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_y6b7o"]
+albedo_color = Color(1, 0.18, 0.18, 1)
+
+[node name="Target" type="Marker3D"]
+script = ExtResource("1_bppv1")
+
+[node name="Debug" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0.1, 0)
+layers = 512
+mesh = SubResource("PrismMesh_ph3e8")
+surface_material_override/0 = SubResource("StandardMaterial3D_y6b7o")

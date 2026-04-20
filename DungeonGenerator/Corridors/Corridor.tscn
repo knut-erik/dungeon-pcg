@@ -1,0 +1,40 @@
+[gd_scene load_steps=3 format=3 uid="uid://272iwhalksmb"]
+
+[ext_resource type="Script" uid="uid://b0q6jxc5k7irl" path="res://DungeonGenerator/Corridors/Corridor.gd" id="1_ere7x"]
+
+[sub_resource type="Curve3D" id="Curve3D_6yffq"]
+
+[node name="Path3D" type="Path3D"]
+curve = SubResource("Curve3D_6yffq")
+script = ExtResource("1_ere7x")
+
+[node name="CSGCombiner3D" type="CSGCombiner3D" parent="."]
+
+[node name="Outer_Polygon" type="CSGPolygon3D" parent="CSGCombiner3D"]
+polygon = PackedVector2Array(-1.5, 0, -1.5, 3.5, 1.5, 3.5, 1.5, 0)
+mode = 2
+path_node = NodePath("../Path3D")
+path_interval_type = 0
+path_interval = 0.5
+path_simplify_angle = 0.0
+path_rotation = 2
+path_rotation_accurate = false
+path_local = true
+path_continuous_u = true
+path_u_distance = 1.0
+path_joined = false
+
+[node name="Inner_Polygon" type="CSGPolygon3D" parent="CSGCombiner3D"]
+operation = 2
+polygon = PackedVector2Array(-1.45, 0.05, -1.45, 3.45, 1.45, 3.45, 1.45, 0.05)
+mode = 2
+path_node = NodePath("../Path3D")
+path_interval_type = 0
+path_interval = 0.5
+path_simplify_angle = 0.0
+path_rotation = 2
+path_rotation_accurate = false
+path_local = true
+path_continuous_u = true
+path_u_distance = 1.0
+path_joined = false

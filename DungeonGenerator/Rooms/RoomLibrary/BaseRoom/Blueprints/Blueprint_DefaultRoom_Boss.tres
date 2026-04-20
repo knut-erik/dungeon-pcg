@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="RoomBlueprint" load_steps=5 format=3 uid="uid://c1qfs1rb8qq06"]
+
+[ext_resource type="Resource" uid="uid://bjhu8ioon3m1s" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/Param_DefaultLength.tres" id="1_5h10t"]
+[ext_resource type="PackedScene" uid="uid://dwngcp7nl6jlu" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/BaseRoom.tscn" id="2_rqt0u"]
+[ext_resource type="Script" uid="uid://djoai4k68rbwe" path="res://DungeonGenerator/Rooms/RoomComponents/RoomBlueprint.gd" id="3_okxkw"]
+[ext_resource type="Resource" uid="uid://cxlveyu0ku3mh" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/Param_DefaultWidth.tres" id="4_ar0nd"]
+
+[resource]
+script = ExtResource("3_okxkw")
+room_scene = ExtResource("2_rqt0u")
+possible_tags = Array[String](["Boss", "Alive"])
+width_param = ExtResource("4_ar0nd")
+length_param = ExtResource("1_5h10t")
+metadata/_custom_type_script = "uid://djoai4k68rbwe"

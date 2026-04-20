@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="RoomParameter" load_steps=3 format=3 uid="uid://cxlveyu0ku3mh"]
+
+[ext_resource type="Script" uid="uid://c7qomtg5xrsxx" path="res://DungeonGenerator/Rooms/RoomComponents/RoomParameter.gd" id="1_ty4wm"]
+
+[sub_resource type="Curve" id="Curve_g12gl"]
+_data = [Vector2(0.19897959, 0.39325845), 0.0, 0.0, 0, 0, Vector2(0.5, 0.70786524), 0.0, 0.0, 0, 0, Vector2(0.7653061, 0.3595506), 0.0, 0.0, 0, 0, Vector2(1, 0.764045), 0.0, 0.0, 0, 0]
+point_count = 4
+
+[resource]
+script = ExtResource("1_ty4wm")
+min_value = 3.0
+max_value = 5.0
+probability_curve = SubResource("Curve_g12gl")
+metadata/_custom_type_script = "uid://c7qomtg5xrsxx"
