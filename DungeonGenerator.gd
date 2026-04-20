@@ -2,17 +2,11 @@ extends Node3D
 class_name DungeonGenerator
 
 @export var room_library: Array[RoomBlueprint] = []
-@export var corridor_scene: PackedScene
 
 @export var num_challenges: int = 3
 @export var create_loop: bool = true
 
-const STAIR_THRESHOLD  := 0.001
-const CORRIDOR_WIDTH   := 3.0
-const CORRIDOR_HEIGHT  := 3.4
-# Units to travel perpendicular to room wall before any turn.
-# Applied at BOTH ends: exit from source, approach to destination.
-const MIN_EXIT         := 8.0
+const STAIR_THRESHOLD := 0.001
 
 func _ready() -> void:
 	if room_library.is_empty():
@@ -168,6 +162,7 @@ func _build_physical_dungeon(logic_nodes: Array[LogicalNode], rng: RandomNumberG
 	await get_tree().process_frame
 	await get_tree().create_timer(0.1).timeout
 
+	var pending_connections: Array = []
 	for logic_node in room_map.keys():
 		var room_a = room_map[logic_node]
 		for connected_logic_node in logic_node.connections:
@@ -182,103 +177,14 @@ func _build_physical_dungeon(logic_nodes: Array[LogicalNode], rng: RandomNumberG
 					push_error("Y-mismatch %.2f: '%s' → '%s'. Trappa ej genererad." \
 						% [y_diff, logic_node.id, connected_logic_node.id])
 					continue
-				_build_corridor(room_a.gateway_out, room_b.gateway_in,
-								physical_rooms, room_a, room_b)
+				pending_connections.append([room_a.gateway_out, room_b.gateway_in])
+
+	var network := CorridorNetwork.new()
+	add_child(network)
+	network.build(pending_connections)
 
 # ==============================================================================
-# DEL 3: L/U-KORRIDORER
-# ==============================================================================
-
-func _build_corridor(gateway_a: Marker3D, gateway_b: Marker3D,
-					 placed_rooms: Array[BaseRoom],
-					 source_room: BaseRoom, dest_room: BaseRoom) -> void:
-	if not corridor_scene: return
-
-	var pos_a = gateway_a.global_position
-	var pos_b = gateway_b.global_position
-	var dir_a = -gateway_a.global_transform.basis.z.normalized()
-	var dir_b = -gateway_b.global_transform.basis.z.normalized()
-	var excluded: Array[BaseRoom] = [source_room, dest_room]
-
-	# Always exit perpendicular to the source wall for MIN_EXIT units.
-	# Always approach the destination perpendicular to its wall for MIN_EXIT units.
-	# This guarantees the corridor never immediately hugs a wall, and U-shapes
-	# emerge naturally when the two rooms face each other.
-	var exit_a     = pos_a + dir_a * MIN_EXIT
-	var approach_b = pos_b + dir_b * MIN_EXIT
-
-	# Degenerate case: stubs overlap (rooms very close together).
-	# Just draw a direct 2-point corridor.
-	if exit_a.distance_to(approach_b) < 0.5:
-		var corridor = corridor_scene.instantiate() as Corridor
-		add_child(corridor)
-		corridor.generate(PackedVector3Array([pos_a, pos_b]))
-		return
-
-	var waypoints = PackedVector3Array([pos_a, exit_a])
-
-	var elbow = _pick_elbow(exit_a, approach_b, dir_a, placed_rooms, excluded)
-	if elbow.distance_to(exit_a) > 0.1 and elbow.distance_to(approach_b) > 0.1:
-		waypoints.append(elbow)
-
-	waypoints.append(approach_b)
-	waypoints.append(pos_b)
-
-	var corridor = corridor_scene.instantiate() as Corridor
-	add_child(corridor)
-	corridor.generate(waypoints)
-
-# Returns the best elbow connecting exit_a to approach_b.
-# Prefers the option whose first segment aligns with dir_a.
-# excluded rooms are skipped in the intersection test.
-func _pick_elbow(exit_a: Vector3, approach_b: Vector3, dir_a: Vector3,
-				 placed_rooms: Array[BaseRoom], excluded: Array[BaseRoom]) -> Vector3:
-	var y: float  = exit_a.y
-	var ea        = Vector3(approach_b.x, y, exit_a.z)   # X-then-Z
-	var eb        = Vector3(exit_a.x,    y, approach_b.z) # Z-then-X
-
-	var ea_blocked: bool = _l_path_hits_room(exit_a, ea, approach_b, placed_rooms, excluded)
-	var eb_blocked: bool = _l_path_hits_room(exit_a, eb, approach_b, placed_rooms, excluded)
-	var ea_aligned: bool = (ea - exit_a).dot(dir_a) > 0.0
-	var eb_aligned: bool = (eb - exit_a).dot(dir_a) > 0.0
-
-	# Priority: unblocked + aligned > unblocked > aligned > fallback
-	if not ea_blocked and ea_aligned: return ea
-	if not eb_blocked and eb_aligned: return eb
-	if not ea_blocked: return ea
-	if not eb_blocked: return eb
-	return ea  # Both blocked — fall back; room margin should make this rare
-
-func _l_path_hits_room(a: Vector3, elbow: Vector3, b: Vector3,
-					   placed_rooms: Array[BaseRoom],
-					   excluded: Array[BaseRoom]) -> bool:
-	return _segment_hits_room(a, elbow, placed_rooms, excluded) \
-		or _segment_hits_room(elbow, b, placed_rooms, excluded)
-
-# AABB intersection check for a single axis-aligned corridor segment.
-# Source and destination rooms are excluded — the corridor legitimately
-# starts and ends inside them. No endpoint shrinking needed.
-func _segment_hits_room(a: Vector3, b: Vector3,
-						placed_rooms: Array[BaseRoom],
-						excluded: Array[BaseRoom]) -> bool:
-	if a.distance_to(b) < 0.05:
-		return false
-	var w: float  = CORRIDOR_WIDTH
-	var seg: AABB = AABB(
-		Vector3(min(a.x, b.x) - w * 0.5, a.y, min(a.z, b.z) - w * 0.5),
-		Vector3(abs(b.x - a.x) + w, CORRIDOR_HEIGHT, abs(b.z - a.z) + w)
-	)
-	for room in placed_rooms:
-		if excluded.has(room):
-			continue
-		for r_aabb in room.get_local_aabbs():
-			var global_r = AABB(r_aabb.position + room.position, r_aabb.size)
-			if seg.intersects(global_r):
-				return true
-	return false
-
-# ==============================================================================
-# DEL 4: KOLLISIONSHJÄLPARE
+# DEL 3: KOLLISIONSHJÄLPARE
 # ==============================================================================
 
 func _check_aabb_overlap(test_pos: Vector3, child_room: BaseRoom,
@@ -619,7 +525,7 @@ class_name DungeonGenerator
 
 # 1. Ett bibliotek av tillgängliga rum (Blueprints) istället för bara en.
 @export var room_library: Array[RoomBlueprint] = []
-@export var corridor_scene: PackedScene 
+@export var corridor_scene: PackedScene
 
 func _ready() -> void:
 	# Säkerhetskontroll
@@ -629,11 +535,11 @@ func _ready() -> void:
 
 	var rng = RandomNumberGenerator.new()
 	rng.randomize()
-	
+
 	# 2. Generera den Logiska Grafen (Detta blir hjärnan)
 	# Just nu gör vi en hårdkodad lista, men snart kommer algoritmen bygga denna!
 	var logical_sequence: Array[LogicalNode] = _generate_logical_graph()
-	
+
 	# 3. Bygg den fysiska världen baserat på grafen
 	_build_physical_dungeon(logical_sequence, rng)
 
@@ -645,48 +551,48 @@ func _ready() -> void:
 # Denna funktion kommer vi att bygga ut för att hantera lås, nycklar etc.
 func _generate_logical_graph() -> Array[LogicalNode]:
 	var graph: Array[LogicalNode] = []
-	
+
 	# Skapa en simpel kedja: Start -> Enemy -> Enemy -> Boss
 	var sequence_tags = ["Entrance", "Alive", "Alive", "Boss"]
-	
+
 	for i in range(sequence_tags.size()):
 		var tag = sequence_tags[i]
-		
+
 		# Hitta en blueprint som stöder denna tagg
 		var chosen_blueprint = _find_blueprint_by_tag(tag)
-		
+
 		if chosen_blueprint == null:
 			push_warning("Hittade inget rum med taggen: " + tag + ". Skippar.")
 			continue
-			
+
 		# Skapa noden
 		var node = LogicalNode.new()
 		node.id = "room_" + str(i)
 		node.assigned_tags.assign([tag])
 		node.blueprint = chosen_blueprint
-		
+
 		# Länka ihop noderna (Node A pekar på Node B)
 		if i > 0 and graph.size() > 0:
 			var prev_node = graph[-1]
 			prev_node.connections.append(node)
-			
+
 		graph.append(node)
-		
+
 	return graph
 
 # En hjälpreda för att söka i biblioteket (Väldigt användbar för Graph Rewriting)
 func _find_blueprint_by_tag(target_tag: String) -> RoomBlueprint:
 	var valid_blueprints: Array[RoomBlueprint] = []
-	
+
 	for blueprint in room_library:
 		# Förutsätter att du har lagt till "possible_tags" i RoomBlueprint.gd
 		if blueprint.possible_tags.has(target_tag):
 			valid_blueprints.append(blueprint)
-			
+
 	if valid_blueprints.size() > 0:
 		# Returnera ett slumpmässigt rum som matchar taggen
 		return valid_blueprints.pick_random()
-	
+
 	return null
 
 # ==============================================================================
@@ -696,31 +602,31 @@ func _find_blueprint_by_tag(target_tag: String) -> RoomBlueprint:
 func _build_physical_dungeon(logic_nodes: Array[LogicalNode], rng: RandomNumberGenerator) -> void:
 	if logic_nodes.is_empty():
 		return
-		
+
 	var physical_rooms: Array[BaseRoom] = []
 	var current_z_offset = 0.0
-	
+
 	# 1. Spawna alla rum
 	for node in logic_nodes:
 		var room_instance = _spawn_room(node, rng)
 		room_instance.position = Vector3(0, 0, current_z_offset)
-		current_z_offset -= 30.0 
+		current_z_offset -= 30.0
 		physical_rooms.append(room_instance)
-		
+
 	# 2. Vänta ordentligt på att trädet är redo
 	await get_tree().process_frame
 	await get_tree().create_timer(0.1).timeout # En liten extra säkerhetsmarginal
-	
+
 	# 3. Rita korridorer
 	for i in range(physical_rooms.size() - 1):
 		var room_a = physical_rooms[i]
 		var room_b = physical_rooms[i + 1]
-		
+
 		if room_a.gateway_out and room_b.gateway_in:
 			_build_corridor(room_a.gateway_out, room_b.gateway_in)
-			
+
 			# Tvinga Godot att rita klart denna korridor innan vi börjar med nästa!
-			await get_tree().process_frame 
+			await get_tree().process_frame
 		else:
 			push_error("Kunde inte hitta gateways för korridor mellan " + room_a.name + " och " + room_b.name)
 
@@ -748,14 +654,14 @@ extends Node3D
 func _ready() -> void:
 	var rng = RandomNumberGenerator.new()
 	rng.randomize()
-	
+
 	# 1. Skapa Rum 1 (Start)
 	var room_1 = _spawn_room("room_1", rng)
-	
+
 	# 2. Skapa Rum 2 (Mål) och flytta det en bit bort
 	var room_2 = _spawn_room("room_2", rng)
 	room_2.position = Vector3(15, 0, -20)
-	
+
 	# Tvinga uppdatering av globala transform-matriser (Viktigt innan vi bygger splines!)
 	# Detta säger åt Godot att räkna ut exakt var portarna är i 3D-rymden just nu.
 	get_tree().process_frame.connect(_build_corridor.bind(room_1.gateway_out, room_2.gateway_in), CONNECT_ONE_SHOT)
@@ -766,11 +672,11 @@ func _spawn_room(id: String, rng: RandomNumberGenerator) -> BaseRoom:
 	var mock_node = LogicalNode.new()
 	mock_node.id = id
 	mock_node.blueprint = test_blueprint
-	
+
 	var room_instance = test_blueprint.room_scene.instantiate() as BaseRoom
 	add_child(room_instance)
 	room_instance.setup_room(rng, mock_node)
-	
+
 	return room_instance
 
 
@@ -792,20 +698,20 @@ func _ready() -> void:
 	# 1. Skapa en RNG
 	var rng = RandomNumberGenerator.new()
 	rng.randomize()
-	
+
 	# 2. Skapa vår fejkade Logiska Nod
 	var mock_node = LogicalNode.new()
 	mock_node.id = "room_01"
 	mock_node.assigned_tags.assign(["Dead"])
 	mock_node.blueprint = test_blueprint
-	
+
 	# 3. Instansiera den fysiska scenen från blueprinten
 	if test_blueprint and test_blueprint.room_scene:
 		var room_instance = test_blueprint.room_scene.instantiate() as BaseRoom
-		
+
 		# Lägg till rummet i världen INNAN vi sätter upp det (viktigt för vissa physics/CSG grejer)
 		add_child(room_instance)
-		
+
 		# 4. Bygg rummet!
 		room_instance.setup_room(rng, mock_node)
 	else:
