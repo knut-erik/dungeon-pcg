@@ -1,1 +1,1 @@
-doesn't work atm - I broke it with ai. Will fix
+Corridors now work! Graph rewriting needs reintegration with corridor system however.
