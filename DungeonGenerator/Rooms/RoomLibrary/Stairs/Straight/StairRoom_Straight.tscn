@@ -1,8 +1,8 @@
 [gd_scene load_steps=5 format=3 uid="uid://c1kc8j6wdt8oo"]
 
 [ext_resource type="Script" uid="uid://d64s5r4uia0i" path="res://DungeonGenerator/Rooms/RoomLibrary/Stairs/Straight/StairRoomStraight.gd" id="1_voa8v"]
-[ext_resource type="PackedScene" uid="uid://c3vqd3lybvf5" path="res://DungeonGenerator/Rooms/RoomBaseline/BoundingBox.tscn" id="2_c8f7d"]
-[ext_resource type="PackedScene" uid="uid://buhg1tfw82ury" path="res://DungeonGenerator/Rooms/RoomBaseline/Gateway.tscn" id="3_30hj7"]
+[ext_resource type="PackedScene" uid="uid://c3vqd3lybvf5" path="res://DungeonGenerator/Rooms/RoomBaseObjects/BoundingBox.tscn" id="2_c8f7d"]
+[ext_resource type="PackedScene" uid="uid://buhg1tfw82ury" path="res://DungeonGenerator/Rooms/RoomBaseObjects/Gateway.tscn" id="3_30hj7"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_c8f7d"]
 albedo_color = Color(0.7235539, 0.48163372, 1.92523e-07, 1)

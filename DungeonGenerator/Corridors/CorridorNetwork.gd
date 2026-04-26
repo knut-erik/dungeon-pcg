@@ -34,19 +34,30 @@ func build(connections: Array, room_aabbs: Array, room_library: Array[RoomBluepr
 	_stair_rooms.clear()
 	_pending_polylines.clear()
 
-	for pair in connections:
-		var ga: Marker3D = pair[0]
-		var gb: Marker3D = pair[1]
+	for connection in connections:
+		var physical_connection := connection as PhysicalConnection
+		if not physical_connection:
+			continue
+
+		var ga: Marker3D = physical_connection.from_anchor.gateway
+		var gb: Marker3D = physical_connection.to_anchor.gateway
+
+		if not ga or not gb:
+			push_warning("CorridorNetwork: PhysicalConnection missing gateway anchors.")
+			continue
 		
 		_register_gateway_opening(ga)
 		_register_gateway_opening(gb)
 		
 		# -- STAIR INJECTION INTERCEPT --
 		if absf(ga.global_position.y - gb.global_position.y) > 0.1:
-			var polyline = _route_connection(ga, gb, true)
-			if not polyline.is_empty():
-				await _inject_stairs_and_split(polyline, ga, gb)
-			continue 
+			var success := await _route_vertical_connection_with_stair_candidates(ga, gb)
+			if not success:
+				push_warning("Candidate stair routing failed. Falling back to polyline stair injection.")
+				var polyline = _route_connection(ga, gb, true)
+				if not polyline.is_empty():
+					await _inject_stairs_and_split(polyline, ga, gb)
+			continue
 			
 		var polyline = _route_connection(ga, gb, false)
 		if not polyline.is_empty():
@@ -55,6 +66,91 @@ func build(connections: Array, room_aabbs: Array, room_library: Array[RoomBluepr
 	_generate_queued_geometry()
 
 # ── INJECTION SYSTEM ─────────────────────────────────────────────────────────
+
+func _route_vertical_connection_with_stair_candidates(ga: Marker3D, gb: Marker3D) -> bool:
+	var delta_y := gb.global_position.y - ga.global_position.y
+
+	var stair_blueprints = _room_library.filter(func(bp): return bp.possible_tags.has("Stairs"))
+	if stair_blueprints.is_empty():
+		push_error("CorridorNetwork: No blueprints found with the 'Stairs' tag!")
+		return false
+
+	var chosen_blueprint = stair_blueprints.pick_random()
+	var stair_room = chosen_blueprint.room_scene.instantiate() as BaseRoom
+	get_parent().add_child(stair_room)
+
+	var dummy_logic := LogicalNode.new()
+	dummy_logic.custom_data["delta_y"] = delta_y
+	await stair_room.setup_room(RandomNumberGenerator.new(), dummy_logic)
+	await get_tree().process_frame
+
+	var gw_in_local : Vector3 = stair_room.gateway_in.position
+	var gw_out_local : Vector3 = stair_room.gateway_out.position
+	var req_length := Vector2(gw_in_local.x, gw_in_local.z).distance_to(Vector2(gw_out_local.x, gw_out_local.z))
+
+	var candidate_dirs := [
+		Vector3.FORWARD,
+		Vector3.BACK,
+		Vector3.RIGHT,
+		Vector3.LEFT
+	]
+
+	var candidate_origins := [
+		ga.global_position,
+		gb.global_position,
+		(ga.global_position + gb.global_position) * 0.5
+	]
+
+	var candidate_offsets := [
+		req_length * 0.5 + CORRIDOR_WIDTH,
+		req_length * 0.5 + CORRIDOR_WIDTH * 2.0,
+		req_length * 0.5 + CORRIDOR_WIDTH * 3.0
+	]
+
+	for origin in candidate_origins:
+		for dir in candidate_dirs:
+			for offset in candidate_offsets:
+				var center_pos : Vector3 = origin + dir * offset
+				center_pos.x = snappedf(center_pos.x, 1.0)
+				center_pos.z = snappedf(center_pos.z, 1.0)
+
+				stair_room.global_position = Vector3(center_pos.x, ga.global_position.y, center_pos.z)
+				stair_room.look_at(stair_room.global_position + dir, Vector3.UP)
+
+				await get_tree().process_frame
+
+				var candidate_aabbs: Array[AABB] = []
+				for world_aabb in stair_room.get_world_aabbs():
+					candidate_aabbs.append(world_aabb)
+
+				if _candidate_aabbs_hit_pending_corridors(candidate_aabbs):
+					continue
+
+				if _candidate_aabbs_hit_rooms(candidate_aabbs):
+					continue
+
+				for aabb in candidate_aabbs:
+					_room_aabbs.append(aabb)
+
+				var path_to_stairs := _route_connection(ga, stair_room.gateway_in, false)
+				var path_from_stairs := _route_connection(stair_room.gateway_out, gb, false)
+
+				if not path_to_stairs.is_empty() and not path_from_stairs.is_empty():
+					_register_gateway_opening(stair_room.gateway_in)
+					_register_gateway_opening(stair_room.gateway_out)
+
+					_pending_polylines.append(path_to_stairs)
+					_pending_polylines.append(path_from_stairs)
+
+					_stair_rooms.append(stair_room)
+					return true
+
+				# Revert temporary AABB reservations.
+				for i in range(candidate_aabbs.size()):
+					_room_aabbs.pop_back()
+
+	stair_room.queue_free()
+	return false
 
 func _inject_stairs_and_split(polyline: PackedVector3Array, ga: Marker3D, gb: Marker3D) -> void:
 	var delta_y := gb.global_position.y - ga.global_position.y
@@ -74,9 +170,9 @@ func _inject_stairs_and_split(polyline: PackedVector3Array, ga: Marker3D, gb: Ma
 	
 	await get_tree().process_frame
 	
-	var gw_in_local = stair_room.gateway_in.position
-	var gw_out_local = stair_room.gateway_out.position
-	var req_length = Vector2(gw_in_local.x, gw_in_local.z).distance_to(Vector2(gw_out_local.x, gw_out_local.z))
+	var gw_in_local: Vector3 = stair_room.gateway_in.position
+	var gw_out_local: Vector3 = stair_room.gateway_out.position
+	var req_length: float = Vector2(gw_in_local.x, gw_in_local.z).distance_to(Vector2(gw_out_local.x, gw_out_local.z))
 	
 	var segment_indices: Array[int] = []
 
@@ -98,10 +194,10 @@ func _inject_stairs_and_split(polyline: PackedVector3Array, ga: Marker3D, gb: Ma
 	var placed_stairs := false
 
 	for seg_i in segment_indices:
-		var p1 := polyline[seg_i]
-		var p2 := polyline[seg_i + 1]
-		var seg_len := p1.distance_to(p2)
-		var dir := (p2 - p1).normalized()
+		var p1: Vector3 = polyline[seg_i]
+		var p2: Vector3 = polyline[seg_i + 1]
+		var seg_len: float = p1.distance_to(p2)
+		var dir: Vector3 = (p2 - p1).normalized()
 
 		var min_t := clampf((req_length * 0.5 + CORRIDOR_WIDTH) / seg_len, 0.05, 0.45)
 
@@ -721,3 +817,11 @@ func get_room_aabbs() -> Array[AABB]:
 
 func get_stair_rooms() -> Array[BaseRoom]:
 	return _stair_rooms
+
+func _candidate_aabbs_hit_rooms(candidate_aabbs: Array[AABB]) -> bool:
+	for candidate in candidate_aabbs:
+		for existing in _room_aabbs:
+			if candidate.grow(0.25).intersects(existing.grow(0.25)):
+				return true
+
+	return false

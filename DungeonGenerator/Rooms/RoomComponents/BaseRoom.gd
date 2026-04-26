@@ -59,7 +59,38 @@ func get_world_aabbs() -> Array[AABB]:
 	return aabbs
 
 # Rummen måste kunna svara på vilka gateways de har lediga
-func get_available_gateway_in() -> Marker3D:
+func get_gateways() -> Array[Gateway]:
+	var result: Array[Gateway] = []
+	for child in find_children("*", "Gateway", true, false):
+		result.append(child)
+	if result.is_empty():
+		push_warning("%s has no Gateway nodes. Replace old Marker3D targets with Gateway.tscn." % name)
+	return result
+
+func claim_gateway_for_edge(edge: LogicalEdge, as_source: bool) -> Gateway:
+	var candidates := get_gateways()
+
+	# Prefer role-compatible gateways.
+	for gateway in candidates:
+		if gateway and gateway.is_available_for_edge(edge):
+			var preferred_role: String = edge.requirements.get(
+				"preferred_from_gateway_role" if as_source else "preferred_to_gateway_role",
+				""
+			)
+
+			if preferred_role != "" and gateway.role == preferred_role:
+				gateway.claim(edge)
+				return gateway
+
+	# Otherwise allow any compatible gateway.
+	for gateway in candidates:
+		if gateway and gateway.is_available_for_edge(edge):
+			gateway.claim(edge)
+			return gateway
+
+	return null
+
+'''func get_available_gateway_in() -> Marker3D:
 	if gateway_in and not gateway_in.get_meta("is_connected", false): 
 		return gateway_in
 	return null
@@ -67,7 +98,7 @@ func get_available_gateway_in() -> Marker3D:
 func get_available_gateway_out() -> Marker3D:
 	if gateway_out and not gateway_out.get_meta("is_connected", false): 
 		return gateway_out
-	return null
+	return null'''
 
 # Denna MÅSTE skrivas över av barn-klasserna
 # setup_room MAY contain awaits (e.g. for CSG to settle).

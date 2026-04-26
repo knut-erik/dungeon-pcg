@@ -1,0 +1,84 @@
+[gd_scene load_steps=9 format=3 uid="uid://d1lgjlvvojgdb"]
+
+[ext_resource type="PackedScene" uid="uid://c7kqgl1k10x14" path="res://addons/jar_voxel_terrain/src/chunk.tscn" id="1_7hprh"]
+[ext_resource type="Script" uid="uid://ex608u7ymxbk" path="res://camera_3d.gd" id="2_gtg1g"]
+[ext_resource type="Script" uid="uid://bvbg7kkml7t7p" path="res://debugPath.gd" id="3_gtg1g"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_7hprh"]
+seed = 2
+frequency = 1.0
+fractal_type = 0
+fractal_octaves = 4
+
+[sub_resource type="JarValleyPathBiome" id="JarValleyPathBiome_7hprh"]
+path_width = 17.0
+valley_depth = 0.28
+mountain_steepness = 1.42
+winding_scale = 0.03
+branchiness = 0.5
+town_radius = 64.0
+detail_noise = SubResource("FastNoiseLite_7hprh")
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_gtg1g"]
+frequency = 1.0
+fractal_octaves = 2
+fractal_gain = 0.4
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_sfjcw"]
+seed = 1
+frequency = 1.0
+fractal_octaves = 3
+fractal_lacunarity = 1.8
+fractal_gain = 0.35
+
+[sub_resource type="JarValleyPathSdf" id="JarValleyPathSdf_7hprh"]
+biome_noise = SubResource("FastNoiseLite_gtg1g")
+shape_noise = SubResource("FastNoiseLite_sfjcw")
+biome = SubResource("JarValleyPathBiome_7hprh")
+height_scale = 1.5
+path_length = 280.0
+path_step = 6.0
+main_meander_amplitude = 20.0
+secondary_meander_amplitude = 6.0
+branch_max_count = 10
+branch_min_length = 16.0
+branch_max_length = 64.0
+branch_bend_amplitude = 5.0
+branch_width_scale = 0.8
+cave_radius = 9.0
+mountain_base_height = 3.0
+mountain_relief = 14.0
+ridge_relief = 3.5
+valley_floor_height = 0.0
+valley_floor_relief = 2.5
+carve_depth = 15.0
+wall_falloff = 36.0
+edge_noise_strength = 0.75
+pocket_strength = 0.8
+pocket_threshold = 0.94
+mountain_macro_frequency = 0.013
+mountain_ridge_frequency = 0.02
+floor_detail_frequency = 0.018
+edge_noise_frequency = 0.025
+pocket_frequency = 0.008
+
+[node name="World" type="Node3D"]
+
+[node name="JarVoxelTerrain" type="JarVoxelTerrain" parent="." node_paths=PackedStringArray("player_node")]
+player_node = NodePath("../Camera3D")
+size = 9
+chunk_scene = ExtResource("1_7hprh")
+sdf = SubResource("JarValleyPathSdf_7hprh")
+performance_max_concurrent_tasks = 24
+
+[node name="Camera3D" type="Camera3D" parent="."]
+script = ExtResource("2_gtg1g")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.6162802, 0.78752697, 0, -0.78752697, 0.6162802, 0, 0, 0)
+
+[node name="Node" type="Node" parent="."]
+script = ExtResource("3_gtg1g")
+noise = SubResource("FastNoiseLite_gtg1g")

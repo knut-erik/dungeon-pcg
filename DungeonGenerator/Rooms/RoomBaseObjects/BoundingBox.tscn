@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://c3vqd3lybvf5"]
 
-[ext_resource type="Script" uid="uid://bj0m1utw368h5" path="res://DungeonGenerator/Rooms/RoomBaseline/BoundingBox.gd" id="1_1f05d"]
+[ext_resource type="Script" uid="uid://bj0m1utw368h5" path="res://DungeonGenerator/Rooms/RoomBaseObjects/BoundingBox.gd" id="1_1f05d"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_msj7p"]
 

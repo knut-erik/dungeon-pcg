@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://cnmkb66qd0ttx"]
+
+[ext_resource type="PackedScene" uid="uid://bubmd1fjgr1si" path="res://DungeonGenerator/Dungeon.tscn" id="1_omtf0"]
+[ext_resource type="PackedScene" uid="uid://d2mie43rxrka6" path="res://CharacterController/Agent.tscn" id="2_exngf"]
+
+[node name="PcgWorld" type="Node3D"]
+
+[node name="Node3D" parent="." instance=ExtResource("1_omtf0")]
+
+[node name="Agent" parent="." instance=ExtResource("2_exngf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
