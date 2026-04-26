@@ -3,9 +3,7 @@
 [ext_resource type="Script" uid="uid://vbeyayofew5n" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/DefaultRoom.gd" id="1_kdl1w"]
 [ext_resource type="PackedScene" uid="uid://c3vqd3lybvf5" path="res://DungeonGenerator/Rooms/RoomBaseline/BoundingBox.tscn" id="1_sfdtf"]
 [ext_resource type="PackedScene" uid="uid://buhg1tfw82ury" path="res://DungeonGenerator/Rooms/RoomBaseline/Gateway.tscn" id="2_vsc08"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_42ot5"]
-albedo_color = Color(3.8023293e-06, 0.64148986, 0.34137204, 1)
+[ext_resource type="Material" uid="uid://cibcmc5ulitt7" path="res://Assets/Materials/stone_bricks.tres" id="3_lsxgb"]
 
 [node name="Node3D" type="Node3D" unique_id=1638007012]
 script = ExtResource("1_kdl1w")
@@ -13,7 +11,8 @@ script = ExtResource("1_kdl1w")
 [node name="Area3D" parent="." unique_id=1799499990 instance=ExtResource("1_sfdtf")]
 
 [node name="CSGCombiner3D" type="CSGCombiner3D" parent="." unique_id=970732676]
-material_override = SubResource("StandardMaterial3D_42ot5")
+material_override = ExtResource("3_lsxgb")
+use_collision = true
 
 [node name="CSGBox3D" type="CSGBox3D" parent="CSGCombiner3D" unique_id=1207516522]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)

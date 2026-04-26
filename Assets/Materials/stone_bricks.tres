@@ -1,0 +1,8 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://cibcmc5ulitt7"]
+
+[ext_resource type="Texture2D" uid="uid://bfu51hftma3bc" path="res://Assets/Textures/a7f357c865756bd8a4cb4fbaa0c9136a0921e749650980fbc234b5a608bfdb68.jpg" id="1_hucfe"]
+
+[resource]
+albedo_texture = ExtResource("1_hucfe")
+uv1_triplanar = true
+texture_filter = 2

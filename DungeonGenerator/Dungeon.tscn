@@ -2,7 +2,6 @@
 
 [ext_resource type="Script" uid="uid://dmcyykdbonpjk" path="res://DungeonGenerator/DungeonGenerator.gd" id="1_nulmw"]
 [ext_resource type="Script" uid="uid://djoai4k68rbwe" path="res://DungeonGenerator/Rooms/RoomComponents/RoomBlueprint.gd" id="2_6h3ij"]
-[ext_resource type="Script" uid="uid://ex608u7ymxbk" path="res://camera_3d.gd" id="2_sifhu"]
 [ext_resource type="Resource" uid="uid://dehwghqowaebi" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/Blueprints/Blueprint_DefaultRoom_Alive.tres" id="3_4p0qp"]
 [ext_resource type="Resource" uid="uid://c1qfs1rb8qq06" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/Blueprints/Blueprint_DefaultRoom_Boss.tres" id="4_8mbj2"]
 [ext_resource type="Resource" uid="uid://dbaj3m75w2egn" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/Blueprints/Blueprint_DefaultRoom_Dead.tres" id="5_dqayi"]
@@ -11,6 +10,7 @@
 [ext_resource type="Resource" uid="uid://dvvbuy7nsok2d" path="res://DungeonGenerator/Rooms/RoomLibrary/Stairs/Straight/Blueprints/Stairs_Straight.tres" id="8_8mbj2"]
 [ext_resource type="Resource" uid="uid://b0orufvkpv4lv" path="res://DungeonGenerator/Rooms/RoomLibrary/VerticalRoom/Blueprints/blueprint_vertical_stairs.tres" id="9_htfvw"]
 [ext_resource type="Script" uid="uid://cyvlhdugha7mg" path="res://DungeonGenerator/DungeonDebugDraw.gd" id="10_8mbj2"]
+[ext_resource type="PackedScene" uid="uid://bs72ogkvdd7d6" path="res://addons/proto_controller/proto_controller.tscn" id="11_htfvw"]
 
 [sub_resource type="Sky" id="Sky_slqep"]
 
@@ -24,9 +24,6 @@ script = ExtResource("1_nulmw")
 room_library = Array[ExtResource("2_6h3ij")]([ExtResource("6_dgn0p"), ExtResource("5_dqayi"), ExtResource("3_4p0qp"), ExtResource("7_1vdva"), ExtResource("4_8mbj2"), ExtResource("8_8mbj2"), ExtResource("9_htfvw")])
 num_challenges = 10
 
-[node name="Camera3D" type="Camera3D" parent="." unique_id=606506143]
-script = ExtResource("2_sifhu")
-
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=872451573]
 environment = SubResource("Environment_gaxvh")
 
@@ -34,3 +31,6 @@ environment = SubResource("Environment_gaxvh")
 script = ExtResource("10_8mbj2")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=567613890]
+
+[node name="ProtoController" parent="." unique_id=1594024709 instance=ExtResource("11_htfvw")]
+can_freefly = true

@@ -1,4 +1,6 @@
-[gd_scene load_steps=3 format=3 uid="uid://272iwhalksmb"]
+[gd_scene format=3 uid="uid://272iwhalksmb"]
+
+[ext_resource type="Material" uid="uid://cibcmc5ulitt7" path="res://Assets/Materials/stone_bricks.tres" id="1_ere7x"]
 
 [sub_resource type="Curve3D" id="Curve3D_6yffq"]
 
@@ -146,13 +148,15 @@ func generate_spline(gateway_a: Marker3D, gateway_b: Marker3D):
 		inner_polygon.path_node = NodePath(\"../..\")'''
 "
 
-[node name="Path3D" type="Path3D"]
+[node name="Path3D" type="Path3D" unique_id=1017574303]
 curve = SubResource("Curve3D_6yffq")
 script = SubResource("GDScript_3rsfl")
 
-[node name="CSGCombiner3D" type="CSGCombiner3D" parent="."]
+[node name="CSGCombiner3D" type="CSGCombiner3D" parent="." unique_id=719765688]
+material_override = ExtResource("1_ere7x")
+use_collision = true
 
-[node name="Outer_Polygon" type="CSGPolygon3D" parent="CSGCombiner3D"]
+[node name="Outer_Polygon" type="CSGPolygon3D" parent="CSGCombiner3D" unique_id=1838187275]
 polygon = PackedVector2Array(-1.5, 0, -1.5, 3.5, 1.5, 3.5, 1.5, 0)
 mode = 2
 path_node = NodePath("../Path3D")
@@ -166,7 +170,7 @@ path_continuous_u = true
 path_u_distance = 1.0
 path_joined = false
 
-[node name="Inner_Polygon" type="CSGPolygon3D" parent="CSGCombiner3D"]
+[node name="Inner_Polygon" type="CSGPolygon3D" parent="CSGCombiner3D" unique_id=1968379614]
 operation = 2
 polygon = PackedVector2Array(-1.45, 0.05, -1.45, 3.45, 1.45, 3.45, 1.45, 0.05)
 mode = 2

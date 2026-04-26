@@ -26,6 +26,11 @@ func build(connections: Array, room_aabbs: Array, room_library: Array[RoomBluepr
 	_csg_root = CSGCombiner3D.new()
 	add_child(_csg_root)
 
+	_csg_root.use_collision = true
+	
+	var material = load("res://Assets/Materials/stone_bricks.tres") as StandardMaterial3D
+	_csg_root.material_override = material
+
 	_room_aabbs.assign(room_aabbs)
 	_room_library = room_library
 
