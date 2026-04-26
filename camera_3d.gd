@@ -1,3 +1,4 @@
+# Test camera that automatically deletes itself if not part of the root scene - great for debugging individual scenes that will later be instantiated!
 extends Node3D
 
 @export var mouse_sensitivity := 0.002
@@ -7,6 +8,11 @@ var rotation_x := 0.0
 
 func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	
+	# 'owner' refers to the root node of the packed scene this camera was saved in (the Dungeon).
+	# If the Dungeon is not the main active scene, delete this camera.
+	if owner != get_tree().current_scene:
+		queue_free()
 
 func _input(event):
 	if event is InputEventMouseMotion:

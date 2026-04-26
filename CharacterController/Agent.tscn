@@ -1,0 +1,24 @@
+[gd_scene load_steps=3 format=3 uid="uid://d2mie43rxrka6"]
+
+[ext_resource type="Script" uid="uid://denrm3efkg4d6" path="res://CharacterController/agent.gd" id="1_kouoa"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_kouoa"]
+radius = 0.3
+height = 1.7
+
+[node name="Agent" type="CharacterBody3D"]
+script = ExtResource("1_kouoa")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("CapsuleShape3D_kouoa")
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5495038, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Head"]
+
+[node name="InteractRay" type="RayCast3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
+target_position = Vector3(0, -1.5, 0)
+
+[node name="StatDisplay" type="SubViewport" parent="."]
