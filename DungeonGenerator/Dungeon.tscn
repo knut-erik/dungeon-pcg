@@ -1,15 +1,15 @@
 [gd_scene load_steps=13 format=3 uid="uid://bubmd1fjgr1si"]
 
-[ext_resource type="Script" uid="uid://dmcyykdbonpjk" path="res://DungeonGenerator.gd" id="1_nulmw"]
+[ext_resource type="Script" uid="uid://dmcyykdbonpjk" path="res://DungeonGenerator/DungeonGenerator.gd" id="1_nulmw"]
 [ext_resource type="Script" uid="uid://djoai4k68rbwe" path="res://DungeonGenerator/Rooms/RoomComponents/RoomBlueprint.gd" id="2_6h3ij"]
 [ext_resource type="Script" uid="uid://ex608u7ymxbk" path="res://camera_3d.gd" id="2_sifhu"]
 [ext_resource type="Resource" uid="uid://dehwghqowaebi" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/Blueprints/Blueprint_DefaultRoom_Alive.tres" id="3_4p0qp"]
-[ext_resource type="PackedScene" uid="uid://272iwhalksmb" path="res://DungeonGenerator/Corridors/Corridor.tscn" id="3_gaxvh"]
 [ext_resource type="Resource" uid="uid://c1qfs1rb8qq06" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/Blueprints/Blueprint_DefaultRoom_Boss.tres" id="4_8mbj2"]
 [ext_resource type="Resource" uid="uid://dbaj3m75w2egn" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/Blueprints/Blueprint_DefaultRoom_Dead.tres" id="5_dqayi"]
 [ext_resource type="Resource" uid="uid://buocak2oaaf5a" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/Blueprints/Blueprint_DefaultRoom_Entrance.tres" id="6_dgn0p"]
 [ext_resource type="Resource" uid="uid://d2my33p8ylqr6" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/Blueprints/Blueprint_DefaultRoom_Trapped.tres" id="7_1vdva"]
 [ext_resource type="Resource" uid="uid://dvvbuy7nsok2d" path="res://DungeonGenerator/Rooms/RoomLibrary/Stairs/Straight/Blueprints/Stairs_Straight.tres" id="8_8mbj2"]
+[ext_resource type="Script" uid="uid://cyvlhdugha7mg" path="res://DungeonGenerator/DungeonDebugDraw.gd" id="10_8mbj2"]
 
 [sub_resource type="Sky" id="Sky_slqep"]
 
@@ -21,10 +21,12 @@ sky = SubResource("Sky_slqep")
 [node name="Node3D" type="Node3D"]
 script = ExtResource("1_nulmw")
 room_library = Array[ExtResource("2_6h3ij")]([ExtResource("6_dgn0p"), ExtResource("5_dqayi"), ExtResource("3_4p0qp"), ExtResource("7_1vdva"), ExtResource("4_8mbj2"), ExtResource("8_8mbj2")])
-corridor_scene = ExtResource("3_gaxvh")
 
 [node name="Camera3D" type="Camera3D" parent="."]
 script = ExtResource("2_sifhu")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_gaxvh")
+
+[node name="Debug" type="Node3D" parent="."]
+script = ExtResource("10_8mbj2")
