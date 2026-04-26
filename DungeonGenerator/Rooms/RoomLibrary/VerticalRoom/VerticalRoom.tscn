@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://b6je6lgucqcev"]
+[gd_scene format=3 uid="uid://b6je6lgucqcev"]
 
 [ext_resource type="Script" uid="uid://b5of6clcwy37k" path="res://DungeonGenerator/Rooms/RoomLibrary/VerticalRoom/vertical_room.gd" id="1_518pl"]
 [ext_resource type="PackedScene" uid="uid://c3vqd3lybvf5" path="res://DungeonGenerator/Rooms/RoomBaseline/BoundingBox.tscn" id="2_cvwn2"]
@@ -22,39 +22,39 @@ func _process(delta):
 	pass
 "
 
-[node name="VerticalRoom" type="Node3D"]
+[node name="VerticalRoom" type="Node3D" unique_id=2027943781]
 script = ExtResource("1_518pl")
 platform_scene = ExtResource("2_qyoc8")
 
-[node name="BoundingBox" parent="." instance=ExtResource("2_cvwn2")]
+[node name="BoundingBox" parent="." unique_id=1213331464 instance=ExtResource("2_cvwn2")]
 
-[node name="CSGCombiner3D" type="CSGCombiner3D" parent="."]
+[node name="CSGCombiner3D" type="CSGCombiner3D" parent="." unique_id=1196715318]
 material_override = SubResource("StandardMaterial3D_cvwn2")
 use_collision = true
 script = SubResource("GDScript_cvwn2")
 
-[node name="CSGBox3D" type="CSGBox3D" parent="CSGCombiner3D"]
+[node name="OuterCSG" type="CSGBox3D" parent="CSGCombiner3D" unique_id=916103131]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
 size = Vector3(4, 10, 4)
 
-[node name="CSGBox3D2" type="CSGBox3D" parent="CSGCombiner3D"]
+[node name="InnerCSG" type="CSGBox3D" parent="CSGCombiner3D" unique_id=833431066]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
 operation = 2
 size = Vector3(3.9, 9.9, 3.9)
 
-[node name="Door1" type="CSGBox3D" parent="CSGCombiner3D"]
+[node name="Door1" type="CSGBox3D" parent="CSGCombiner3D" unique_id=634408073]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1.1, 0)
 operation = 2
 size = Vector3(0.5, 2.1, 0.75)
 
-[node name="Target" parent="CSGCombiner3D/Door1" instance=ExtResource("2_y78pj")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.05, 0)
+[node name="Target" parent="CSGCombiner3D/Door1" unique_id=286769834 instance=ExtResource("2_y78pj")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0, -1.2, 0)
 
-[node name="Door2" type="CSGBox3D" parent="CSGCombiner3D"]
+[node name="Door2" type="CSGBox3D" parent="CSGCombiner3D" unique_id=1912568088]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 8.9, 0)
 operation = 2
 size = Vector3(0.5, 2.1, 0.75)
 
-[node name="Target" parent="CSGCombiner3D/Door2" instance=ExtResource("2_y78pj")]
-transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, -1.05, 0)
+[node name="Target2" parent="CSGCombiner3D/Door2" unique_id=538063130 instance=ExtResource("2_y78pj")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 0, -1.2, 0)
 gizmo_extents = 2.65

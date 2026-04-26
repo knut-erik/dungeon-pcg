@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RoomParameter" load_steps=3 format=3 uid="uid://bjhu8ioon3m1s"]
+[gd_resource type="Resource" script_class="RoomParameter" format=3 uid="uid://bjhu8ioon3m1s"]
 
 [ext_resource type="Script" uid="uid://c7qomtg5xrsxx" path="res://DungeonGenerator/Rooms/RoomComponents/RoomParameter.gd" id="1_sdura"]
 
