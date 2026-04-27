@@ -1,0 +1,14 @@
+[gd_scene load_steps=4 format=3 uid="uid://dmqtshuqlumb8"]
+
+[ext_resource type="Script" uid="uid://8ls7jmi255g6" path="res://DungeonGenerator/Rooms/RoomLibrary/Stairs/Cavern/stair_room_cavern.gd" id="1_1ymm5"]
+[ext_resource type="PackedScene" uid="uid://c3vqd3lybvf5" path="res://DungeonGenerator/Rooms/RoomBaseObjects/BoundingBox.tscn" id="2_7yg54"]
+[ext_resource type="PackedScene" uid="uid://buhg1tfw82ury" path="res://DungeonGenerator/Rooms/RoomBaseObjects/Gateway.tscn" id="3_2u22y"]
+
+[node name="StairRoomCavern" type="Node3D"]
+script = ExtResource("1_1ymm5")
+
+[node name="Area3D" parent="." instance=ExtResource("2_7yg54")]
+
+[node name="Target" parent="." instance=ExtResource("3_2u22y")]
+
+[node name="Target2" parent="." instance=ExtResource("3_2u22y")]
