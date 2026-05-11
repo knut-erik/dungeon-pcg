@@ -1,6 +1,6 @@
 [gd_scene load_steps=4 format=3 uid="uid://buhg1tfw82ury"]
 
-[ext_resource type="Script" uid="uid://dl5s4vqexjl21" path="res://DungeonGenerator/Rooms/RoomBaseObjects/Gateway.gd" id="1_bppv1"]
+[ext_resource type="Script" uid="uid://dl5s4vqexjl21" path="res://DungeonGenerator/Rooms/RoomBaseObjects/Scenes/Gateway.gd" id="1_bppv1"]
 
 [sub_resource type="PrismMesh" id="PrismMesh_ph3e8"]
 size = Vector3(0.2, 0.2, 0.2)

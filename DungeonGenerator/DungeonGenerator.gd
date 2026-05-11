@@ -9,6 +9,18 @@ class_name DungeonGenerator
 # The grid size should ~match CorridorNetwork.GRID_SIZE
 const GRID_SIZE := 1.0 
 
+const COMPONENT_DESCRIPTORS_KEY := "dungeon_components"
+
+const COMPONENT_SCENE_REGISTRY := {
+	"key_pickup": preload("res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/Scenes/KeyPickup.tscn"),
+	"lever": preload("res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/Scenes/Lever.tscn"),
+	"lock_trigger_area": preload("res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/Scenes/LockTriggerArea.tscn"),
+	"hinge_door": preload("res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/Scenes/HingeDoor.tscn"),
+	"false_door_blocker": preload("res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/Scenes/FalseDoorBlocker.tscn")
+}
+
+var room_instances_by_node_id: Dictionary = {}
+
 func _ready() -> void:
 	if room_library.is_empty():
 		push_error("DungeonGenerator saknar RoomBlueprints! Lägg till dem i editorn.")
@@ -89,43 +101,14 @@ func _build_physical_dungeon(graph: LogicalGraph, rng: RandomNumberGenerator) ->
 		return
 
 	var start_logic: LogicalNode = graph.nodes[0]
-	var start_room: BaseRoom = await _spawn_room(start_logic)
+	var start_room: BaseRoom = await _spawn_room(start_logic, rng)
 	start_room.position = Vector3.ZERO
 
 	physical_rooms.append(start_room)
 	room_map[start_logic] = start_room
 
-	var boss_logic: LogicalNode = _find_first_node_with_tag(graph, "Boss")
-
-	if boss_logic and boss_logic != start_logic:
-		var boss_room: BaseRoom = await _spawn_room(boss_logic)
-
-		var placed_boss := _place_room_near_room(
-			boss_room,
-			start_room,
-			physical_rooms,
-			rng,
-			start_room.global_position.y,
-			[14.0, 18.0, 22.0, 26.0, 30.0]
-		)
-
-		if not placed_boss:
-			_place_room_fallback(
-				boss_room,
-				start_room,
-				physical_rooms,
-				rng,
-				start_room.global_position.y
-			)
-
-		physical_rooms.append(boss_room)
-		room_map[boss_logic] = boss_room
-
 	var queue: Array[LogicalNode] = [start_logic]
 	var visited := { start_logic: true }
-
-	if boss_logic:
-		visited[boss_logic] = true
 	
 	# 2. Place all other rooms
 	while not queue.is_empty():
@@ -143,13 +126,15 @@ func _build_physical_dungeon(graph: LogicalGraph, rng: RandomNumberGenerator) ->
 			visited[child_logic] = true
 			queue.append(child_logic)
 
-			var child_room := await _spawn_room(child_logic)
+			var child_room := await _spawn_room(child_logic, rng)
 
 			var target_gateway_y := curr_room.global_position.y
 
-			# Introduce Y-height variations organically. 
+			# Introduce Y-height variations organically.
 			# The CorridorNetwork will intercept these deltas and build stairs automatically.
-			var should_change_height := rng.randf() < 0.30
+			# Key-branch rooms must stay at the same Y as their parent: the junction
+			# connecting them is in corridor space and cannot support stair injection.
+			var should_change_height := rng.randf() < 0.30 and edge.edge_type != "key_branch"
 			if should_change_height:
 				var direction := 1.0 if rng.randf() > 0.5 else -1.0
 				target_gateway_y += rng.randf_range(4.0, 8.0) * direction
@@ -177,7 +162,7 @@ func _build_physical_dungeon(graph: LogicalGraph, rng: RandomNumberGenerator) ->
 		if room_map.has(node):
 			continue
 
-		var orphan_room := await _spawn_room(node)
+		var orphan_room := await _spawn_room(node, rng)
 		_place_room_fallback(orphan_room, start_room, physical_rooms, rng, start_room.global_position.y)
 		physical_rooms.append(orphan_room)
 		room_map[node] = orphan_room
@@ -198,11 +183,15 @@ func _build_physical_dungeon(graph: LogicalGraph, rng: RandomNumberGenerator) ->
 	add_child(network)
 	await network.build(physical_connections, room_aabbs, room_library)
 
+	network.seal_unused_gateways(physical_rooms)
+
 	var debug := DungeonDebugDraw.new()
 	add_child(debug)
 	# Ensures DungeonDebugDraw._ready() has initialized its ImmediateMesh.
 	await get_tree().process_frame
 	debug.draw_debug(network, physical_rooms, network.get_stair_rooms())
+
+	_spawn_graph_components(graph)
 
 # ==============================================================================
 # DEL 3: KOLLISIONSHJÄLPARE
@@ -228,12 +217,22 @@ func _check_aabb_overlap(test_pos: Vector3, child_room: BaseRoom, placed_rooms: 
 					return true
 	return false
 
-func _spawn_room(logic_node) -> BaseRoom:
-	var room = logic_node.blueprint.room_scene.instantiate() as BaseRoom
+func _spawn_room(logic_node: LogicalNode, rng: RandomNumberGenerator) -> BaseRoom:
+	var room := logic_node.blueprint.room_scene.instantiate() as BaseRoom
 	add_child(room)
+	_register_room_instance(logic_node, room)
 	if room.has_method("setup_room"):
-		await room.setup_room(RandomNumberGenerator.new(), logic_node)
+		await room.setup_room(rng, logic_node)
+	await get_tree().process_frame
 	return room
+
+
+func _register_room_instance(logical_node: LogicalNode, room_instance: BaseRoom) -> void:
+	if logical_node == null or room_instance == null:
+		return
+	room_instances_by_node_id[logical_node.id] = room_instance
+	if room_instance.has_method("bind_to_logic"):
+		room_instance.bind_to_logic(logical_node)
 
 # ==============================================================================
 # Helpers
@@ -241,6 +240,7 @@ func _spawn_room(logic_node) -> BaseRoom:
 
 func _assign_physical_connections(graph: LogicalGraph, room_map: Dictionary) -> Array[PhysicalConnection]:
 	var result: Array[PhysicalConnection] = []
+	var needs_junction: Array[LogicalEdge] = []
 
 	for edge in graph.edges:
 		if not room_map.has(edge.from_node) or not room_map.has(edge.to_node):
@@ -251,13 +251,21 @@ func _assign_physical_connections(graph: LogicalGraph, room_map: Dictionary) -> 
 		var to_room: BaseRoom = room_map[edge.to_node]
 
 		var from_gateway := from_room.claim_gateway_for_edge(edge, true)
+
+		if not from_gateway:
+			if edge.edge_type == "key_branch":
+				needs_junction.append(edge)
+			else:
+				push_warning("Could not assign from_gateway for edge %s: %s -> %s" % [
+					edge.id, edge.from_node.id, edge.to_node.id
+				])
+			continue
+
 		var to_gateway := to_room.claim_gateway_for_edge(edge, false)
 
-		if not from_gateway or not to_gateway:
-			push_warning("Could not assign gateways for edge %s: %s -> %s" % [
-				edge.id,
-				edge.from_node.id,
-				edge.to_node.id
+		if not to_gateway:
+			push_warning("Could not assign to_gateway for edge %s: %s -> %s" % [
+				edge.id, edge.from_node.id, edge.to_node.id
 			])
 			continue
 
@@ -278,21 +286,47 @@ func _assign_physical_connections(graph: LogicalGraph, room_map: Dictionary) -> 
 
 		result.append(connection)
 
-	for node in graph.nodes:
-		if not room_map.has(node):
-			continue
-
-		var room: BaseRoom = room_map[node]
-		var gateway_count := room.get_gateways().size()
-
-		if gateway_count < node.degree():
-			push_warning("Room for node %s has degree %d but only %d gateways." % [
-				node.id,
-				node.degree(),
-				gateway_count
-			])
+	for edge in needs_junction:
+		_try_assign_corridor_junction(edge, room_map, result)
 
 	return result
+
+
+func _try_assign_corridor_junction(
+	edge: LogicalEdge,
+	room_map: Dictionary,
+	result: Array[PhysicalConnection]
+) -> void:
+	var from_node: LogicalNode = edge.from_node
+	var to_node: LogicalNode = edge.to_node
+	var from_room: BaseRoom = room_map[from_node]
+	var to_room: BaseRoom = room_map[to_node]
+
+	var to_gateway := to_room.claim_gateway_for_edge(edge, false)
+	if to_gateway == null:
+		push_warning("Junction: no gateway in key room for edge %s" % edge.id)
+		return
+
+	# from_anchor is a placeholder; CorridorNetwork.build() will find the actual
+	# junction point on a committed corridor polyline during Phase 2.
+	var from_anchor := PhysicalAnchor.new()
+	from_anchor.kind = PhysicalAnchor.AnchorKind.CORRIDOR_POINT
+	from_anchor.owner_node = from_node
+	from_anchor.owner_edge = edge
+
+	var to_anchor := PhysicalAnchor.from_gateway(to_gateway, edge, to_node)
+	edge.to_gateway_id = to_gateway.gateway_id
+
+	var connection := PhysicalConnection.new()
+	connection.logical_edge = edge
+	connection.from_node = from_node
+	connection.to_node = to_node
+	connection.from_room = from_room
+	connection.to_room = to_room
+	connection.from_anchor = from_anchor
+	connection.to_anchor = to_anchor
+
+	result.append(connection)
 
 func _place_room_corridor_friendly(
 		child_room: BaseRoom,
@@ -321,7 +355,7 @@ func _place_room_near_room(
 		child_room: BaseRoom,
 		parent_room: BaseRoom,
 		physical_rooms: Array[BaseRoom],
-		rng: RandomNumberGenerator,
+		_rng: RandomNumberGenerator,
 		required_y: float,
 		distance_steps: Array[float]
 	) -> bool:
@@ -433,3 +467,261 @@ func _validate_logical_graph(graph: LogicalGraph) -> bool:
 			push_warning("DungeonGenerator: Locked edge '%s' has no key_id yet." % edge.id)
 
 	return ok
+
+func _spawn_graph_components(graph: LogicalGraph) -> void:
+	print("")
+	print("========== SPAWNING DUNGEON COMPONENTS ==========")
+
+	for node in graph.nodes:
+		_spawn_node_components(node)
+
+	for edge in graph.edges:
+		_spawn_edge_components(edge)
+
+	print("=================================================")
+	print("")
+
+
+func _spawn_node_components(logical_node: LogicalNode) -> void:
+	if logical_node == null:
+		return
+
+	var room_instance := _get_room_instance_for_node(logical_node)
+	if room_instance == null:
+		push_warning(
+			"Cannot spawn node components. No room instance for node_id=%s" % logical_node.id
+		)
+		return
+
+	for descriptor in _get_component_descriptors(logical_node.custom_data):
+		_spawn_component_from_descriptor(room_instance, descriptor, logical_node, null)
+
+
+func _spawn_edge_components(edge: LogicalEdge) -> void:
+	if edge == null:
+		return
+
+	for descriptor in _get_component_descriptors(edge.custom_data):
+		var edge_side := str(descriptor.get("edge_side", ""))
+
+		var target_node: LogicalNode
+		match edge_side:
+			"from":
+				target_node = edge.from_node
+			"to":
+				target_node = edge.to_node
+			_:
+				push_warning(
+					"Edge component %s has invalid edge_side='%s'. Expected 'from' or 'to'."
+					% [str(descriptor.get("component_id", "")), edge_side]
+				)
+				continue
+
+		if target_node == null:
+			push_warning(
+				"Edge component %s has no target node for edge_side=%s on edge=%s"
+				% [str(descriptor.get("component_id", "")), edge_side, edge.id]
+			)
+			continue
+
+		var room_instance := _get_room_instance_for_node(target_node)
+		if room_instance == null:
+			push_warning(
+				"Cannot spawn edge component %s. No room instance for node_id=%s edge=%s"
+				% [str(descriptor.get("component_id", "")), target_node.id, edge.id]
+			)
+			continue
+
+		_spawn_component_from_descriptor(room_instance, descriptor, target_node, edge)
+
+
+func _spawn_component_from_descriptor(
+	room_instance: Node3D,
+	descriptor: Dictionary,
+	logical_node: LogicalNode,
+	logical_edge: LogicalEdge = null
+) -> void:
+	var component_id := str(descriptor.get("component_id", ""))
+	var component_type := str(descriptor.get("component_type", ""))
+	var scene_key := str(descriptor.get("scene_key", ""))
+	var socket_role := str(descriptor.get("socket_role", ""))
+	var gateway_role := str(descriptor.get("gateway_role", ""))
+
+	var socket := _find_component_socket(room_instance, socket_role, gateway_role, component_type)
+
+	if socket == null:
+		push_warning(
+			"No socket found for component_id=%s component_type=%s scene_key=%s socket_role=%s gateway_role=%s in room=%s. Available sockets: %s"
+			% [
+				component_id, component_type, scene_key,
+				socket_role, gateway_role, room_instance.name,
+				_debug_socket_summary(room_instance)
+			]
+		)
+		return
+
+	var packed_scene := _get_component_scene(scene_key)
+	if packed_scene == null:
+		push_warning("No component scene registered for scene_key=%s" % scene_key)
+		return
+
+	var instance := packed_scene.instantiate()
+	if not instance is DungeonComponent:
+		push_warning(
+			"Scene for scene_key=%s does not have a DungeonComponent root. Root is %s."
+			% [scene_key, instance.get_class()]
+		)
+		instance.queue_free()
+		return
+
+	var component := instance as DungeonComponent
+
+	if not component_id.is_empty():
+		component.name = component_id
+
+	component.bind_to_logic(logical_node, logical_edge)
+
+	if component is LockComponent:
+		(component as LockComponent).configure_from_descriptor(descriptor)
+	else:
+		component.component_id = component_id
+		component.component_type = component_type
+
+	component.transform = Transform3D.IDENTITY
+	socket.add_child(component)
+
+	print(
+		"DungeonGenerator: spawned component_id=", component_id,
+		" component_type=", component_type,
+		" scene_key=", scene_key,
+		" room=", room_instance.name,
+		" socket=", socket.name,
+		" logical_node=", logical_node.id if logical_node else "",
+		" logical_edge=", logical_edge.id if logical_edge else ""
+	)
+
+
+func _get_component_descriptors(custom_data: Dictionary) -> Array:
+	var raw = custom_data.get(COMPONENT_DESCRIPTORS_KEY, [])
+	if raw is Array:
+		return raw
+	return []
+
+
+func _get_room_instance_for_node(logical_node: LogicalNode) -> Node3D:
+	if logical_node == null:
+		return null
+	return room_instances_by_node_id.get(logical_node.id, null)
+
+
+func _get_component_scene(scene_key: String) -> PackedScene:
+	return COMPONENT_SCENE_REGISTRY.get(scene_key, null)
+
+
+func _find_component_socket(
+	root: Node,
+	socket_role: String,
+	gateway_role: String = "",
+	component_type: String = ""
+) -> Node3D:
+	var fallback_socket: Node3D = null
+
+	for child in root.find_children("*", "", true, false):
+		if not child is Node3D:
+			continue
+
+		var socket := child as Node3D
+
+		if not _is_component_socket(socket):
+			continue
+
+		if not _socket_accepts_role(socket, socket_role):
+			continue
+
+		if not _socket_accepts_component_type(socket, component_type):
+			continue
+
+		if gateway_role.is_empty():
+			return socket
+
+		if _socket_has_exact_gateway_role(socket, gateway_role):
+			return socket
+
+		if _socket_accepts_gateway_role(socket, gateway_role):
+			if fallback_socket == null:
+				fallback_socket = socket
+
+	return fallback_socket
+
+
+func _is_component_socket(node: Node) -> bool:
+	return node.has_method("can_accept_component_role") or node.has_meta("socket_role")
+
+
+func _socket_accepts_role(socket: Node, socket_role: String) -> bool:
+	if socket.has_method("can_accept_component_role"):
+		return socket.can_accept_component_role(socket_role)
+	if socket.has_meta("socket_role"):
+		return str(socket.get_meta("socket_role")) == socket_role
+	return false
+
+
+func _socket_accepts_gateway_role(socket: Node, gateway_role: String) -> bool:
+	if gateway_role.is_empty():
+		return true
+	if socket.has_method("can_accept_gateway_role"):
+		return socket.can_accept_gateway_role(gateway_role)
+	if socket.has_meta("gateway_role"):
+		var socket_gateway_role := str(socket.get_meta("gateway_role"))
+		return socket_gateway_role.is_empty() or socket_gateway_role == gateway_role
+	return true
+
+
+func _socket_has_exact_gateway_role(socket: Node, gateway_role: String) -> bool:
+	if gateway_role.is_empty():
+		return false
+	if socket.has_meta("gateway_role"):
+		return str(socket.get_meta("gateway_role")) == gateway_role
+	var socket_gateway = socket.get("gateway_role")
+	if socket_gateway != null:
+		return str(socket_gateway) == gateway_role
+	return false
+
+
+func _socket_accepts_component_type(socket: Node, component_type: String) -> bool:
+	if component_type.is_empty():
+		return true
+	if socket.has_method("can_accept_component_type"):
+		return socket.can_accept_component_type(component_type)
+	return true
+
+
+func _debug_socket_summary(root: Node) -> String:
+	var parts: Array[String] = []
+
+	for child in root.find_children("*", "", true, false):
+		if not _is_component_socket(child):
+			continue
+
+		var socket_role := ""
+		var gateway_role := ""
+
+		if child.has_meta("socket_role"):
+			socket_role = str(child.get_meta("socket_role"))
+		else:
+			var value = child.get("socket_role")
+			if value != null:
+				socket_role = str(value)
+
+		if child.has_meta("gateway_role"):
+			gateway_role = str(child.get_meta("gateway_role"))
+		else:
+			var gateway_value = child.get("gateway_role")
+			if gateway_value != null:
+				gateway_role = str(gateway_value)
+
+		parts.append(
+			"%s(socket_role=%s,gateway_role=%s)" % [child.name, socket_role, gateway_role]
+		)
+
+	return ", ".join(parts)

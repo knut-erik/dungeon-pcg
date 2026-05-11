@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="RoomBlueprint" load_steps=5 format=3 uid="uid://baadv2ce1qh3g"]
+
+[ext_resource type="Script" uid="uid://djoai4k68rbwe" path="res://DungeonGenerator/Rooms/RoomComponents/RoomBlueprint.gd" id="1_4cprl"]
+[ext_resource type="Resource" uid="uid://bjhu8ioon3m1s" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/Param_DefaultLength.tres" id="1_idc07"]
+[ext_resource type="PackedScene" uid="uid://dmwlboypnoh5h" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/BaseRoomLocked.tscn" id="2_raley"]
+[ext_resource type="Resource" uid="uid://cxlveyu0ku3mh" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/Param_DefaultWidth.tres" id="4_dksu2"]
+
+[resource]
+script = ExtResource("1_4cprl")
+room_scene = ExtResource("2_raley")
+possible_tags = Array[String](["Locked"])
+width_param = ExtResource("4_dksu2")
+length_param = ExtResource("1_idc07")
+metadata/_custom_type_script = "uid://djoai4k68rbwe"
