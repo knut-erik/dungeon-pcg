@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://dnd15ybts1i7v"]
+
+[ext_resource type="Script" uid="uid://dlubatyi3iggh" path="res://DungeonGenerator/Rooms/RoomBaseObjects/Scenes/SceneTransitionSocket.gd" id="1_4it12"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_qyg2l"]
+
+[node name="SceneTransition" type="Area3D"]
+script = ExtResource("1_4it12")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_qyg2l")
+
+[node name="ArrivalMarker" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)

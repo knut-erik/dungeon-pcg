@@ -1,74 +1,251 @@
 extends Node3D
 class_name CorridorNetwork
 
-const CORRIDOR_WIDTH  := 3.0
+const CORRIDOR_WIDTH := 3.0
 const CORRIDOR_HEIGHT := 3.4
-const SLAB_T          := 0.15 # T for threshold 
+const SLAB_T := 0.15 # T for threshold
 
 # TODO: Explain constants with comments
-const GRID_SCALE      := 2.0  # SCALE = 2.0 means 1 Grid Unit = 0.5 World Units. This perfectly captures 0.5 offset gateways without floating point errors!
+const GRID_SCALE := 2.0 # SCALE = 2.0 means 1 Grid Unit = 0.5 World Units. This perfectly captures 0.5 offset gateways without floating point errors!
 const WALL_MERGE_EPS := 0.08
 const Y_EPS := 0.15
 const ROOM_WALL_CUT_MARGIN := 0.20
 const GATEWAY_EXEMPT_STEPS := 6 # How many grid steps from start/goal are exempt from AABB collision. CORRIDOR_WIDTH=3.0, GRID_SCALE=2.0 → wall thickness is ~2 grid units. 6 gives a safe margin to clear the room wall before collision kicks in.
 const GATEWAY_SIDEWALL_ALIGN_TOL := 0.30
 const GATEWAY_SIDEWALL_DOT_LIMIT := -0.75
+const GATEWAY_RESERVED_THROAT_STEPS := 6
+const GATEWAY_RESERVED_THROAT_HALF_WIDTH := CORRIDOR_WIDTH * 0.5 + 0.10
+
+const ROUTING_ZONE_KEY := "routing_zone"
 
 var _pending_polylines: Array[PackedVector3Array] = []
+var _pending_corridor_aabbs: Array[AABB] = []
+var _pending_polyline_records: Array[Dictionary] = []
+var _pending_corridor_records: Array[Dictionary] = []
+var _active_routing_zone: String = "default"
 var _csg_root: CSGCombiner3D
 var _room_aabbs: Array[AABB] = []
 var _stair_rooms: Array[BaseRoom] = []
+var _stair_aabbs: Array[AABB] = []
 var _footprints: Array[Dictionary] = []
-var _gateway_openings: Array[Dictionary] = []  # { "pos": Vector3, "dir": Vector2 }
+var _gateway_openings: Array[Dictionary] = [] # { "pos": Vector3, "dir": Vector2 }
 var _room_library: Array[RoomBlueprint] = []
+var _active_edge_id: String = ""
+var _reserved_gateway_throats: Array[Dictionary] = []
+
+const ASTAR_SEARCH_MARGIN_GRID := 80
+const ASTAR_MAX_ITERATIONS := 50000
+
+
+# Candidate stair routes should fail fast.
+# If a stair candidate needs a huge detour, it is a bad candidate.
+const ASTAR_CANDIDATE_SEARCH_MARGIN_GRID := 28
+const ASTAR_CANDIDATE_MAX_ITERATIONS := 4000
 
 func build(connections: Array, room_aabbs: Array, room_library: Array[RoomBlueprint]) -> void:
 	_csg_root = CSGCombiner3D.new()
 	add_child(_csg_root)
-
+	
 	_csg_root.use_collision = true
 	
-	var material = load("res://Assets/Materials/stone_bricks.tres") as StandardMaterial3D
-	_csg_root.material_override = material
-
+	var mat := StandardMaterial3D.new()
+	mat.albedo_texture = load("res://Assets/texture/RockPillar/Color.png")
+	mat.normal_enabled = true
+	mat.normal_texture = load("res://Assets/texture/RockPillar/Normal.png")
+	mat.heightmap_enabled = true
+	mat.heightmap_texture = load("res://Assets/texture/RockPillar/Displacement.exr")
+	mat.heightmap_scale = 0.15
+	_csg_root.material_override = mat
+	
 	_room_aabbs.assign(room_aabbs)
 	_room_library = room_library
 
 	_footprints.clear()
 	_gateway_openings.clear()
 	_stair_rooms.clear()
+	_stair_aabbs.clear()
 	_pending_polylines.clear()
+	_pending_corridor_aabbs.clear()
+	_pending_polyline_records.clear()
+	_pending_corridor_records.clear()
+	_reserved_gateway_throats.clear()
+	_active_routing_zone = "default"
+	_active_edge_id = ""
+
+	# Phase 1: route all normal gateway-to-gateway connections.
+	# Junction connections (CORRIDOR_POINT) are deferred to Phase 2 so they can
+	# find their branch point on already-committed corridor polylines.
+	var gateway_connections: Array[PhysicalConnection] = []
+	var junction_connections: Array[PhysicalConnection] = []
 
 	for connection in connections:
-		var physical_connection := connection as PhysicalConnection
-		if not physical_connection:
+		var pc := connection as PhysicalConnection
+		if not pc:
 			continue
 
-		var ga: Marker3D = physical_connection.from_anchor.gateway
-		var gb: Marker3D = physical_connection.to_anchor.gateway
+		if pc.from_anchor.kind == PhysicalAnchor.AnchorKind.CORRIDOR_POINT:
+			junction_connections.append(pc)
+		else:
+			gateway_connections.append(pc)
+
+	_pre_register_connection_gateways(connections)
+
+	for pc in gateway_connections:
+		_active_routing_zone = _get_edge_routing_zone(pc.logical_edge)
+		_active_edge_id = pc.logical_edge.id if pc.logical_edge != null else ""
+
+		var ga: Marker3D = pc.from_anchor.gateway
+		var gb: Marker3D = pc.to_anchor.gateway
 
 		if not ga or not gb:
 			push_warning("CorridorNetwork: PhysicalConnection missing gateway anchors.")
 			continue
 		
-		_register_gateway_opening(ga)
-		_register_gateway_opening(gb)
-		
 		# -- STAIR INJECTION INTERCEPT --
 		if absf(ga.global_position.y - gb.global_position.y) > 0.1:
 			var success := await _route_vertical_connection_with_stair_candidates(ga, gb)
-			if not success:
+			if success:
+				_register_gateway_opening(ga, pc.logical_edge)
+				_register_gateway_opening(gb, pc.logical_edge)
+			else:
 				push_warning("Candidate stair routing failed. Falling back to polyline stair injection.")
-				var polyline = _route_connection(ga, gb, true)
-				if not polyline.is_empty():
-					await _inject_stairs_and_split(polyline, ga, gb)
+				var fallback_polyline = _route_connection(ga, gb, true, true)
+				if not fallback_polyline.is_empty():
+					_register_gateway_opening(ga, pc.logical_edge)
+					_register_gateway_opening(gb, pc.logical_edge)
+					await _inject_stairs_and_split(fallback_polyline, ga, gb)
 			continue
-			
-		var polyline = _route_connection(ga, gb, false)
-		if not polyline.is_empty():
-			_pending_polylines.append(polyline)
-	
+
+		var flat_polyline = _route_connection(ga, gb, false)
+		if not flat_polyline.is_empty():
+			_register_gateway_opening(ga, pc.logical_edge)
+			_register_gateway_opening(gb, pc.logical_edge)
+			_commit_polyline(flat_polyline)
+
+	# Phase 2: route junction (key-branch) connections.
+	# All main-path corridors are now committed so _find_junction_point can
+	# locate a real corridor point to branch from.
+	# Not a coroutine — call directly, no await.
+	for pc in junction_connections:
+		_active_routing_zone = _get_edge_routing_zone(pc.logical_edge)
+		_active_edge_id = pc.logical_edge.id if pc.logical_edge != null else ""
+		_route_junction_connection(pc)
+
+	_active_routing_zone = "default"
+
+	print(
+		"CorridorNetwork: committed_polylines=",
+		_pending_polylines.size(),
+		" committed_gateway_openings=",
+		_gateway_openings.size(),
+		" reserved_gateway_throats=",
+		_reserved_gateway_throats.size()
+	)
+
 	_generate_queued_geometry()
+
+# ── JUNCTION ROUTING ─────────────────────────────────────────────────────────
+
+func _find_junction_point(key_room_pos: Vector3, routing_zone: String = "default") -> Vector3:
+	var best := Vector3(INF, INF, INF)
+	var best_dist := INF
+	var target_y := key_room_pos.y
+
+	for record in _pending_polyline_records:
+		var other_zone := str(record.get("routing_zone", "default"))
+
+		if not _corridor_zones_can_merge(routing_zone, other_zone):
+			continue
+
+		var polyline := record["polyline"] as PackedVector3Array
+
+		# Skip index 0 and size-1: those are gateway positions sitting inside
+		# room AABBs. A* can't start from inside a room without the
+		# gateway-throat exemption, which only applies to real room gateways.
+		for i in range(1, polyline.size() - 1):
+			var point := polyline[i]
+			if absf(point.y - target_y) > Y_EPS:
+				continue
+			var d := Vector2(point.x - key_room_pos.x, point.z - key_room_pos.z).length()
+			if d < best_dist:
+				best_dist = d
+				best = point
+
+	return best
+
+
+func _route_junction_connection(pc: PhysicalConnection) -> void:
+	var gb: Marker3D = pc.to_anchor.gateway
+	if not gb:
+		push_warning("Junction: no to_gateway for edge %s" % pc.logical_edge.id)
+		return
+
+	var key_pos := gb.global_position
+	var junction_pos := _find_junction_point(key_pos, _active_routing_zone)
+
+	if junction_pos.x == INF:
+		push_warning("Junction: no committed corridor at Y=%.1f to branch from." % key_pos.y)
+		return
+
+	# Use key room Y exactly so there is no height mismatch.
+	junction_pos.y = key_pos.y
+
+	var polyline := _route_from_point(junction_pos, gb)
+	if not polyline.is_empty():
+		_register_gateway_opening(gb, pc.logical_edge)
+		_commit_polyline(polyline)
+
+
+func _route_from_point(start_pos: Vector3, gb: Marker3D, quiet: bool = false) -> PackedVector3Array:
+	# Route from an arbitrary interior corridor position to a room gateway.
+	# No direction constraint on the start side — A* exits freely.
+	# The gateway direction constraint on gb is preserved.
+	if absf(start_pos.y - gb.global_position.y) > 0.1:
+		if not quiet:
+			push_error("_route_from_point: Y mismatch start=%.2f goal=%.2f" % [start_pos.y, gb.global_position.y])
+		return PackedVector3Array()
+
+	var pos_b := gb.global_position
+	var out_dir_b := _snap_to_cardinal(-gb.global_transform.basis.z)
+	var dir_bi := Vector2i(roundi(out_dir_b.x), roundi(out_dir_b.z))
+
+	var start2i := Vector2i(roundi(start_pos.x * GRID_SCALE), roundi(start_pos.z * GRID_SCALE))
+	var goal2i := Vector2i(roundi(pos_b.x * GRID_SCALE), roundi(pos_b.z * GRID_SCALE))
+
+	var goal_owner := _find_owner_aabb_index(pos_b, true)
+
+	var path2i := _directional_astar(
+		start2i, goal2i,
+		Vector2i.ZERO, dir_bi, # ZERO = no first-step constraint on junction side
+		start_pos.y, start_pos.y,
+		-1, goal_owner, # junction is in open corridor space, no start exemption
+		quiet,
+		ASTAR_MAX_ITERATIONS,
+		ASTAR_SEARCH_MARGIN_GRID
+	)
+
+	if path2i.is_empty():
+		# Retry with relaxed goal direction so nearby placements can still connect.
+		path2i = _directional_astar(
+			start2i, goal2i,
+			Vector2i.ZERO, Vector2i.ZERO,
+			start_pos.y, start_pos.y,
+			-1, goal_owner,
+			quiet,
+			ASTAR_MAX_ITERATIONS,
+			ASTAR_SEARCH_MARGIN_GRID
+		)
+
+	if path2i.is_empty():
+		if not quiet:
+			push_warning("Junction route failed: %s → %s" % [start_pos, pos_b])
+		return PackedVector3Array()
+
+	var p3 := PackedVector3Array()
+	for p in path2i:
+		p3.append(Vector3(float(p.x) / GRID_SCALE, start_pos.y, float(p.y) / GRID_SCALE))
+	return _clean_collinear(p3)
+
 
 # ── INJECTION SYSTEM ─────────────────────────────────────────────────────────
 
@@ -89,8 +266,8 @@ func _route_vertical_connection_with_stair_candidates(ga: Marker3D, gb: Marker3D
 	await stair_room.setup_room(RandomNumberGenerator.new(), dummy_logic)
 	await get_tree().process_frame
 
-	var gw_in_local : Vector3 = stair_room.gateway_in.position
-	var gw_out_local : Vector3 = stair_room.gateway_out.position
+	var gw_in_local: Vector3 = stair_room.gateway_in.position
+	var gw_out_local: Vector3 = stair_room.gateway_out.position
 	var req_length := Vector2(gw_in_local.x, gw_in_local.z).distance_to(Vector2(gw_out_local.x, gw_out_local.z))
 
 	var candidate_dirs := [
@@ -112,10 +289,12 @@ func _route_vertical_connection_with_stair_candidates(ga: Marker3D, gb: Marker3D
 		req_length * 0.5 + CORRIDOR_WIDTH * 3.0
 	]
 
+	var room_aabb_count_before_search := _room_aabbs.size()
+
 	for origin in candidate_origins:
 		for dir in candidate_dirs:
 			for offset in candidate_offsets:
-				var center_pos : Vector3 = origin + dir * offset
+				var center_pos: Vector3 = origin + dir * offset
 				center_pos.x = snappedf(center_pos.x, 1.0)
 				center_pos.z = snappedf(center_pos.z, 1.0)
 
@@ -134,28 +313,69 @@ func _route_vertical_connection_with_stair_candidates(ga: Marker3D, gb: Marker3D
 				if _candidate_aabbs_hit_rooms(candidate_aabbs):
 					continue
 
+				var room_aabb_count_before_candidate := _room_aabbs.size()
+
 				for aabb in candidate_aabbs:
 					_room_aabbs.append(aabb)
 
-				var path_to_stairs := _route_connection(ga, stair_room.gateway_in, false)
-				var path_from_stairs := _route_connection(stair_room.gateway_out, gb, false)
+				var path_to_stairs := _route_connection(
+					ga,
+					stair_room.gateway_in,
+					false,
+					true,
+					ASTAR_CANDIDATE_MAX_ITERATIONS,
+					ASTAR_CANDIDATE_SEARCH_MARGIN_GRID
+				)
 
-				if not path_to_stairs.is_empty() and not path_from_stairs.is_empty():
+				if path_to_stairs.is_empty():
+					_truncate_room_aabbs(room_aabb_count_before_candidate)
+					continue
+
+				var path_from_stairs := _route_connection(
+					stair_room.gateway_out,
+					gb,
+					false,
+					true,
+					ASTAR_CANDIDATE_MAX_ITERATIONS,
+					ASTAR_CANDIDATE_SEARCH_MARGIN_GRID
+				)
+
+				if not path_from_stairs.is_empty():
 					_register_gateway_opening(stair_room.gateway_in)
 					_register_gateway_opening(stair_room.gateway_out)
 
-					_pending_polylines.append(path_to_stairs)
-					_pending_polylines.append(path_from_stairs)
+					_commit_polyline(path_to_stairs)
+					_commit_polyline(path_from_stairs)
 
 					_stair_rooms.append(stair_room)
+					_remember_stair_aabbs(stair_room)
 					return true
 
-				# Revert temporary AABB reservations.
-				for i in range(candidate_aabbs.size()):
-					_room_aabbs.pop_back()
+				_truncate_room_aabbs(room_aabb_count_before_candidate)
 
+	_truncate_room_aabbs(room_aabb_count_before_search)
 	stair_room.queue_free()
 	return false
+
+func _gateway_has_clear_first_step(from_gateway: Marker3D, to_gateway: Marker3D) -> bool:
+	var pos_a := from_gateway.global_position
+	var pos_b := to_gateway.global_position
+
+	var out_dir_a := _snap_to_cardinal(-from_gateway.global_transform.basis.z)
+
+	var start2i := Vector2i(roundi(pos_a.x * GRID_SCALE), roundi(pos_a.z * GRID_SCALE))
+	var first_step := start2i + Vector2i(roundi(out_dir_a.x), roundi(out_dir_a.z))
+
+	var min_y := minf(pos_a.y, pos_b.y)
+	var max_y := maxf(pos_a.y, pos_b.y)
+
+	var start_owner := _find_owner_aabb_index(pos_a)
+	var ignored: Array[int] = []
+
+	if start_owner != -1 and _edge_in_gateway_throat(start2i, first_step, start2i, Vector2i(roundi(out_dir_a.x), roundi(out_dir_a.z))):
+		ignored.append(start_owner)
+
+	return _is_edge_valid(start2i, first_step, min_y, max_y, ignored)
 
 func _inject_stairs_and_split(polyline: PackedVector3Array, ga: Marker3D, gb: Marker3D) -> void:
 	var delta_y := gb.global_position.y - ga.global_position.y
@@ -167,7 +387,7 @@ func _inject_stairs_and_split(polyline: PackedVector3Array, ga: Marker3D, gb: Ma
 	var chosen_blueprint = stair_blueprints.pick_random()
 	
 	var stair_room = chosen_blueprint.room_scene.instantiate() as BaseRoom
-	get_parent().add_child(stair_room) 
+	get_parent().add_child(stair_room)
 	
 	var dummy_logic = LogicalNode.new()
 	dummy_logic.custom_data["delta_y"] = delta_y
@@ -235,48 +455,63 @@ func _inject_stairs_and_split(polyline: PackedVector3Array, ga: Marker3D, gb: Ma
 		stair_room.queue_free()
 		return
 	
+	var room_aabb_count_before_stair := _room_aabbs.size()
+
 	for world_aabb in stair_room.get_world_aabbs():
 		_room_aabbs.append(world_aabb)
-	
+
+	var path_to_stairs := _route_connection(ga, stair_room.gateway_in, false)
+	var path_from_stairs := _route_connection(stair_room.gateway_out, gb, false)
+
+	if path_to_stairs.is_empty() or path_from_stairs.is_empty():
+		push_warning("Stair Injection Failed! Could not route both sides of injected stair.")
+		_truncate_room_aabbs(room_aabb_count_before_stair)
+		stair_room.queue_free()
+		return
+
+	_remember_stair_aabbs(stair_room)
+
 	_register_gateway_opening(stair_room.gateway_in)
 	_register_gateway_opening(stair_room.gateway_out)
-	
-	var path_to_stairs   = _route_connection(ga, stair_room.gateway_in, false)
-	var path_from_stairs = _route_connection(stair_room.gateway_out, gb, false)
-	
-	if not path_to_stairs.is_empty():
-		_pending_polylines.append(path_to_stairs)
 
-	if not path_from_stairs.is_empty():
-		_pending_polylines.append(path_from_stairs)
-		
+	_commit_polyline(path_to_stairs)
+	_commit_polyline(path_from_stairs)
+
 	_stair_rooms.append(stair_room)
 
 # ── ROUTING ──────────────────────────────────────────────────────────────────
 
-func _route_connection(ga: Marker3D, gb: Marker3D, ignore_y: bool) -> PackedVector3Array:
+func _route_connection(
+		ga: Marker3D,
+		gb: Marker3D,
+		ignore_y: bool,
+		quiet: bool = false,
+		max_iterations: int = ASTAR_MAX_ITERATIONS,
+		search_margin_grid: int = ASTAR_SEARCH_MARGIN_GRID
+	) -> PackedVector3Array:
 	var pos_a := ga.global_position
 	var pos_b := gb.global_position
 	
 	if not ignore_y and absf(pos_a.y - pos_b.y) > 0.1:
-		push_error("Height Mismatch! Y1: ", pos_a.y, " Y2: ", pos_b.y)
+		if not quiet:
+			push_error("Height Mismatch! Y1: ", pos_a.y, " Y2: ", pos_b.y)
 		return PackedVector3Array()
 		
 	var out_dir_a := _snap_to_cardinal(-ga.global_transform.basis.z)
 	var out_dir_b := _snap_to_cardinal(-gb.global_transform.basis.z)
 	
 	var start2i := Vector2i(roundi(pos_a.x * GRID_SCALE), roundi(pos_a.z * GRID_SCALE))
-	var goal2i  := Vector2i(roundi(pos_b.x * GRID_SCALE), roundi(pos_b.z * GRID_SCALE))
-	var dir_ai  := Vector2i(roundi(out_dir_a.x), roundi(out_dir_a.z))
-	var dir_bi  := Vector2i(roundi(out_dir_b.x), roundi(out_dir_b.z))
+	var goal2i := Vector2i(roundi(pos_b.x * GRID_SCALE), roundi(pos_b.z * GRID_SCALE))
+	var dir_ai := Vector2i(roundi(out_dir_a.x), roundi(out_dir_a.z))
+	var dir_bi := Vector2i(roundi(out_dir_b.x), roundi(out_dir_b.z))
 	
 	var min_y := minf(pos_a.y, pos_b.y)
 	var max_y := maxf(pos_a.y, pos_b.y)
 
-	# Instead of finding owner AABBs, just record the gateway grid positions.
-	# Only these exact cells get exempted from collision — not entire room footprints.
-	var start_owner := _find_owner_aabb_index(pos_a)
-	var goal_owner := _find_owner_aabb_index(pos_b)
+	# Owner AABB is used only for gateway-throat exemptions; -1 is safe and
+	# expected for corridor junction points. Always quiet to avoid noise.
+	var start_owner := _find_owner_aabb_index(pos_a, true)
+	var goal_owner := _find_owner_aabb_index(pos_b, true)
 
 	var path2i = _directional_astar(
 		start2i,
@@ -286,27 +521,36 @@ func _route_connection(ga: Marker3D, gb: Marker3D, ignore_y: bool) -> PackedVect
 		min_y,
 		max_y,
 		start_owner,
-		goal_owner
+		goal_owner,
+		quiet,
+		max_iterations,
+		search_margin_grid
 	)
 	
 	# Fallback: if strict routing fails, relax the goal approach direction.
 	# This handles same-facing gateways at close range where a U-path is geometrically
 	# impossible due to room AABBs blocking the required swing-out space.
 	if path2i.is_empty():
-		push_warning("Strict routing failed, retrying with relaxed goal constraint.")
+		if not quiet:
+			push_warning("Strict routing failed, retrying with relaxed goal constraint.")
+
 		path2i = _directional_astar(
-		start2i,
-		goal2i,
-		dir_ai,
-		Vector2i.ZERO,
-		min_y,
-		max_y,
-		start_owner,
-		goal_owner
-	)
+			start2i,
+			goal2i,
+			dir_ai,
+			Vector2i.ZERO,
+			min_y,
+			max_y,
+			start_owner,
+			goal_owner,
+			quiet,
+			max_iterations,
+			search_margin_grid
+		)
 		
 	if path2i.is_empty():
-		push_warning("Corridor failed: No orthogonal route from %s to %s." % [start2i, goal2i])
+		if not quiet:
+			push_warning("Corridor failed: No orthogonal route from %s to %s." % [start2i, goal2i])
 		return PackedVector3Array()
 		
 	var p3 := PackedVector3Array()
@@ -316,62 +560,134 @@ func _route_connection(ga: Marker3D, gb: Marker3D, ignore_y: bool) -> PackedVect
 	return _clean_collinear(p3)
 
 
-func _find_owner_aabb_index(world_pos: Vector3) -> int:
+func _find_owner_aabb_index(world_pos: Vector3, quiet: bool = false) -> int:
 	for i in range(_room_aabbs.size()):
 		if _room_aabbs[i].grow(0.35).has_point(world_pos):
 			return i
 
-	push_warning("_find_owner_aabb: No AABB contains point %s" % world_pos)
+	if not quiet:
+		push_warning("_find_owner_aabb: No AABB contains point %s" % world_pos)
 	return -1
 
 # ── STRICT INTEGER A* WITH MIN-HEAP ──────────────────────────────────────────
 
-func _directional_astar(start: Vector2i, goal: Vector2i, out_a: Vector2i, out_b: Vector2i, min_y: float, max_y: float, start_owner: int, goal_owner: int) -> Array[Vector2i]:
+func _directional_astar(
+		start: Vector2i,
+		goal: Vector2i,
+		out_a: Vector2i,
+		out_b: Vector2i,
+		min_y: float,
+		max_y: float,
+		start_owner: int,
+		goal_owner: int,
+		quiet: bool = false,
+		max_iterations: int = ASTAR_MAX_ITERATIONS,
+		search_margin_grid: int = ASTAR_SEARCH_MARGIN_GRID
+	) -> Array[Vector2i]:
 	if start == goal:
 		return [start, goal]
-	
+
+	# Key optimization:
+	# If the goal has a required outward direction, do not search for the
+	# gateway cell itself. Search for the required approach cell instead,
+	# then append the final step into the gateway.
+	var astar_goal := goal
+	if out_b != Vector2i.ZERO:
+		astar_goal = goal + out_b
+
+	# Special case: source is already on the required approach cell.
+	if astar_goal == start:
+		var final_step := goal - start
+
+		if out_a != Vector2i.ZERO and final_step != out_a:
+			return []
+
+		var ignored_final: Array[int] = []
+		if goal_owner != -1 and _edge_in_gateway_throat(start, goal, goal, out_b):
+			ignored_final.append(goal_owner)
+
+		if _is_edge_valid(start, goal, min_y, max_y, ignored_final):
+			return [start, goal]
+
+		return []
+
 	var heap := _BinHeap.new()
 	var came_from := {}
 	var g_score := {start: 0.0}
-	var dist_from_start := {start: 0}  # track step count from start
+	var dist_from_start := {start: 0}
+	var closed := {}
 	var counter := 0
-	
-	var start_h := float(absi(start.x - goal.x) + absi(start.y - goal.y))
+
+	var start_h := float(absi(start.x - astar_goal.x) + absi(start.y - astar_goal.y))
 	heap.push([start_h, counter, start])
 	counter += 1
-	
-	var dirs := [Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 0), Vector2i(-1, 0)]
+
+	var dirs := [
+		Vector2i(0, 1),
+		Vector2i(0, -1),
+		Vector2i(1, 0),
+		Vector2i(-1, 0)
+	]
+
+	var min_bound_x := mini(mini(start.x, astar_goal.x), goal.x) - search_margin_grid
+	var max_bound_x := maxi(maxi(start.x, astar_goal.x), goal.x) + search_margin_grid
+	var min_bound_y := mini(mini(start.y, astar_goal.y), goal.y) - search_margin_grid
+	var max_bound_y := maxi(maxi(start.y, astar_goal.y), goal.y) + search_margin_grid
+
 	var iterations := 0
-	
-	while not heap.is_empty() and iterations < 50000: # was 25000 (faster, but less accurate)
+
+	while not heap.is_empty() and iterations < max_iterations:
 		iterations += 1
+
 		var current_data = heap.pop()
 		var curr: Vector2i = current_data[2]
-		
-		if curr == goal:
+
+		if closed.has(curr):
+			continue
+
+		closed[curr] = true
+
+		if curr == astar_goal:
 			var path: Array[Vector2i] = [curr]
+
 			while came_from.has(curr):
 				curr = came_from[curr]
 				path.insert(0, curr)
+
+			if astar_goal != goal:
+				var ignored_final: Array[int] = []
+
+				if goal_owner != -1 and _edge_in_gateway_throat(astar_goal, goal, goal, out_b):
+					ignored_final.append(goal_owner)
+
+				if not _is_edge_valid(astar_goal, goal, min_y, max_y, ignored_final):
+					return []
+
+				path.append(goal)
+
 			return path
-			
-		var is_start := (curr == start)
+
+		var is_start := curr == start
 		var steps_from_start: int = dist_from_start.get(curr, 999)
-		var steps_to_goal: int = absi(curr.x - goal.x) + absi(curr.y - goal.y)
-		
+
 		for d in dirs:
-			var nxt : Vector2i = curr + d
-			var is_goal : bool = (nxt == goal)
-			
-			# Directional Edge Constraints
-			if is_start and d != out_a:
-				continue 
-			# Goal constraint — skip if out_b is zero (relaxed mode - direction doesn't matter, only position does)
-			if is_goal and out_b != Vector2i.ZERO and d != -out_b:
+			var nxt: Vector2i = curr + d
+
+			if nxt.x < min_bound_x or nxt.x > max_bound_x or nxt.y < min_bound_y or nxt.y > max_bound_y:
 				continue
-			
-			# Skip AABB checks near gateways — the direction constraint ensures
-			# we're exiting the room, not routing back through it.
+
+			# If we are using an approach cell, do not enter the real goal
+			# from a wrong side during search.
+			if astar_goal != goal and nxt == goal:
+				continue
+
+			if closed.has(nxt):
+				continue
+
+			# First movement must leave the source gateway in its facing direction.
+			if is_start and out_a != Vector2i.ZERO and d != out_a:
+				continue
+
 			var ignored_aabb_indices: Array[int] = []
 
 			if start_owner != -1 and _edge_in_gateway_throat(curr, nxt, start, out_a):
@@ -382,22 +698,31 @@ func _directional_astar(start: Vector2i, goal: Vector2i, out_a: Vector2i, out_b:
 
 			if not _is_edge_valid(curr, nxt, min_y, max_y, ignored_aabb_indices):
 				continue
-				
-			var tentative_g = g_score[curr] + 1.0
-			if came_from.has(curr) and (curr - came_from[curr]) != d:
-					tentative_g += 0.5 # Turn penalty favors straight lines
-					
+
+			var tentative_g: float = g_score[curr] + 1.0
+
+			if came_from.has(curr) and curr - came_from[curr] != d:
+				tentative_g += 0.5
+
 			if not g_score.has(nxt) or tentative_g < g_score[nxt]:
 				came_from[nxt] = curr
 				g_score[nxt] = tentative_g
 				dist_from_start[nxt] = steps_from_start + 1
-				var h := float(absi(nxt.x - goal.x) + absi(nxt.y - goal.y))
+
+				var h := float(absi(nxt.x - astar_goal.x) + absi(nxt.y - astar_goal.y))
 				heap.push([tentative_g + h, counter, nxt])
 				counter += 1
-					
 
-	push_warning("A* exhausted after %d iterations. start=%s goal=%s out_a=%s out_b=%s\n" % [
-		iterations, start, goal, out_a, out_b])
+	if not quiet:
+		push_warning("A* exhausted after %d iterations. start=%s goal=%s astar_goal=%s out_a=%s out_b=%s\n" % [
+			iterations,
+			start,
+			goal,
+			astar_goal,
+			out_a,
+			out_b
+		])
+
 	return []
 
 func _edge_in_gateway_throat(p1: Vector2i, p2: Vector2i, gateway: Vector2i, out_dir: Vector2i) -> bool:
@@ -440,7 +765,7 @@ class _BinHeap:
 		return top
 	func _sift_up(i: int) -> void:
 		while i > 0:
-			var p = (i - 1) / 2
+			var p := floori(float(i - 1) / 2.0)
 			if _data[i][0] < _data[p][0]:
 				var tmp = _data[i]
 				_data[i] = _data[p]
@@ -463,8 +788,8 @@ class _BinHeap:
 
 # ── EXACT COLLISION CHECKING ─────────────────────────────────────────────────
 
-func _is_edge_valid( p1: Vector2i, p2: Vector2i, min_y: float, max_y: float, ignored_aabb_indices: Array[int]) -> bool:
-	var w   := CORRIDOR_WIDTH
+func _is_edge_valid(p1: Vector2i, p2: Vector2i, min_y: float, max_y: float, ignored_aabb_indices: Array[int]) -> bool:
+	var w := CORRIDOR_WIDTH
 	var p1f := Vector2(p1) / GRID_SCALE
 	var p2f := Vector2(p2) / GRID_SCALE
 
@@ -472,15 +797,15 @@ func _is_edge_valid( p1: Vector2i, p2: Vector2i, min_y: float, max_y: float, ign
 	if p1.x == p2.x: # Z movement
 		var min_z := minf(p1f.y, p2f.y)
 		var max_z := maxf(p1f.y, p2f.y)
-		rect = Rect2(p1f.x - w/2.0, min_z - w/2.0, w, (max_z - min_z) + w)
+		rect = Rect2(p1f.x - w / 2.0, min_z - w / 2.0, w, (max_z - min_z) + w)
 	else: # X movement
 		var min_x := minf(p1f.x, p2f.x)
 		var max_x := maxf(p1f.x, p2f.x)
-		rect = Rect2(min_x - w/2.0, p1f.y - w/2.0, (max_x - min_x) + w, w)
+		rect = Rect2(min_x - w / 2.0, p1f.y - w / 2.0, (max_x - min_x) + w, w)
 
 	rect = rect.grow(-0.05)
 
-	var corr_top    := max_y + CORRIDOR_HEIGHT
+	var corr_top := max_y + CORRIDOR_HEIGHT
 	var corr_bottom := min_y
 
 	for i in range(_room_aabbs.size()):
@@ -497,6 +822,32 @@ func _is_edge_valid( p1: Vector2i, p2: Vector2i, min_y: float, max_y: float, ign
 		if rect.intersects(room_rect):
 			return false
 
+	# Same-zone corridors may merge freely at the same height (T-junctions, overlaps).
+	# Cross-zone corridors (pre_lock vs post_lock) are always blocked.
+	for record in _pending_corridor_records:
+		var corridor_aabb := record["aabb"] as AABB
+		var other_zone := str(record.get("routing_zone", "default"))
+
+		if corridor_aabb.position.y + corridor_aabb.size.y <= corr_bottom:
+			continue
+
+		if corridor_aabb.position.y >= corr_top:
+			continue
+
+		if absf(min_y - corridor_aabb.position.y) < Y_EPS:
+			if _corridor_zones_can_merge(_active_routing_zone, other_zone):
+				continue
+
+		var c_rect := Rect2(
+			corridor_aabb.position.x, corridor_aabb.position.z,
+			corridor_aabb.size.x, corridor_aabb.size.z
+		)
+		if rect.intersects(c_rect):
+			return false
+
+	if _edge_blocks_reserved_gateway_throat(p1, p2, min_y, max_y, _active_edge_id):
+		return false
+
 	return true
 
 # ── GEOMETRY GENERATION ──────────────────────────────────────────────────────
@@ -512,6 +863,9 @@ func _generate_queued_geometry() -> void:
 
 	for polyline in _pending_polylines:
 		_generate_walls(polyline)
+	
+	# Disable until routing is stable again.
+	# _generate_gateway_corner_plugs()
 
 func _register_footprints(polyline: PackedVector3Array) -> void:
 	var w := CORRIDOR_WIDTH
@@ -575,8 +929,21 @@ func _generate_walls(polyline: PackedVector3Array) -> void:
 		
 		# Expand wall interval by half corridor width so convex (outer) corners close.
 		if is_x:
-			var x_min := minf(fa.x, fb.x) - w / 2.0
-			var x_max := maxf(fa.x, fb.x) + w / 2.0
+			var extend_a := w / 2.0 if i > 0 else 0.0
+			var extend_b := w / 2.0 if i < polyline.size() - 2 else 0.0
+
+			var a_main := fa.x
+			var b_main := fb.x
+
+			var x_min: float
+			var x_max: float
+
+			if a_main <= b_main:
+				x_min = a_main - extend_a
+				x_max = b_main + extend_b
+			else:
+				x_min = b_main - extend_b
+				x_max = a_main + extend_a
 
 			for sign_dir in [-1.0, 1.0]:
 				var wall_z: float = fa.z + sign_dir * w * 0.5
@@ -594,8 +961,21 @@ func _generate_walls(polyline: PackedVector3Array) -> void:
 					var wx: float = (iv[0] + iv[1]) * 0.5
 					_make_box(Vector3(wlen, h, SLAB_T), Vector3(wx, fa.y + h / 2.0, wall_z))
 		else:
-			var z_min := minf(fa.z, fb.z) - w / 2.0
-			var z_max := maxf(fa.z, fb.z) + w / 2.0
+			var extend_a := w / 2.0 if i > 0 else 0.0
+			var extend_b := w / 2.0 if i < polyline.size() - 2 else 0.0
+
+			var a_main := fa.z
+			var b_main := fb.z
+
+			var z_min: float
+			var z_max: float
+
+			if a_main <= b_main:
+				z_min = a_main - extend_a
+				z_max = b_main + extend_b
+			else:
+				z_min = b_main - extend_b
+				z_max = a_main + extend_a
 
 			for sign_dir in [-1.0, 1.0]:
 				var wall_x: float = fa.x + sign_dir * w * 0.5
@@ -615,6 +995,24 @@ func _generate_walls(polyline: PackedVector3Array) -> void:
 
 
 # ── HELPERS ──────────────────────────────────────────────────────────────────
+
+func _commit_polyline(polyline: PackedVector3Array, routing_zone: String = "") -> void:
+	if routing_zone.is_empty():
+		routing_zone = _active_routing_zone
+
+	_pending_polylines.append(polyline)
+	_pending_polyline_records.append({
+		"polyline": polyline,
+		"routing_zone": routing_zone
+	})
+
+	for aabb in _polyline_to_corridor_aabbs(polyline):
+		_pending_corridor_aabbs.append(aabb)
+		_pending_corridor_records.append({
+			"aabb": aabb,
+			"routing_zone": routing_zone
+		})
+
 
 func _candidate_aabbs_hit_pending_corridors(candidate_aabbs: Array[AABB]) -> bool:
 	for candidate in candidate_aabbs:
@@ -663,15 +1061,21 @@ func _polyline_to_corridor_aabbs(polyline: PackedVector3Array) -> Array[AABB]:
 
 	return result
 
-func _register_gateway_opening(gateway: Marker3D) -> void:
-	if not gateway:
+func _register_gateway_opening(gateway: Marker3D, owner_edge: LogicalEdge = null) -> void:
+	if gateway == null:
+		return
+
+	if _gateway_opening_already_registered(gateway, owner_edge):
 		return
 
 	var dir3 := _snap_to_cardinal(-gateway.global_transform.basis.z)
+	var dir2 := Vector2(dir3.x, dir3.z)
 
 	_gateway_openings.append({
 		"pos": gateway.global_position,
-		"dir": Vector2(dir3.x, dir3.z)
+		"dir": dir2,
+		"owner_edge_id": owner_edge.id if owner_edge != null else "",
+		"routing_zone": _active_routing_zone
 	})
 
 func _get_exposed_intervals(
@@ -682,7 +1086,6 @@ func _get_exposed_intervals(
 		outside_sign: float,
 		wall_y: float
 	) -> Array:
-
 	var uncovered := [[start, end]]
 
 	# Probe just outside the wall, not exactly on the wall line.
@@ -721,15 +1124,27 @@ func _get_exposed_intervals(
 		var rm_ortho_min: float = aabb.position.z if is_horizontal else aabb.position.x
 		var rm_ortho_max: float = rm_ortho_min + (aabb.size.z if is_horizontal else aabb.size.x)
 
-		# Important:
-		# Use an inclusive/grown test. Stair rooms are exactly corridor-width,
-		# so side walls often lie exactly on the AABB boundary.
-		if orthogonal_pos >= rm_ortho_min - ROOM_WALL_CUT_MARGIN and orthogonal_pos <= rm_ortho_max + ROOM_WALL_CUT_MARGIN:
-			uncovered = _subtract_interval_list(
-				uncovered,
-				rm_start - ROOM_WALL_CUT_MARGIN,
-				rm_end + ROOM_WALL_CUT_MARGIN
-			)
+		var is_stair := _is_stair_aabb(aabb)
+		
+		if is_stair:
+			# Stair AABBs are often exactly corridor-width, so boundary-inclusive
+			# cutting is still needed to avoid stair-side wall pillars.
+			if orthogonal_pos >= rm_ortho_min - ROOM_WALL_CUT_MARGIN and orthogonal_pos <= rm_ortho_max + ROOM_WALL_CUT_MARGIN:
+				uncovered = _subtract_interval_list(
+					uncovered,
+					rm_start - ROOM_WALL_CUT_MARGIN,
+					rm_end + ROOM_WALL_CUT_MARGIN
+				)
+		else:
+			# Only cut walls when the corridor center is well inside the room's
+			# orthogonal extent. A half-corridor-width inset prevents false cuts
+			# from corridors that merely graze the room boundary.
+			if orthogonal_pos > rm_ortho_min + CORRIDOR_WIDTH * 0.5 and orthogonal_pos < rm_ortho_max - CORRIDOR_WIDTH * 0.5:
+				uncovered = _subtract_interval_list(
+					uncovered,
+					rm_start,
+					rm_end
+				)
 
 	# Subtract gateway openings only from side walls that are parallel to the
 	# room/stair wall and face back toward the gateway.
@@ -791,13 +1206,27 @@ func _subtract_interval_list(intervals: Array, cut_start: float, cut_end: float)
 
 	return result
 
+func _get_edge_routing_zone(edge: LogicalEdge) -> String:
+	if edge == null:
+		return "default"
+	return str(edge.custom_data.get(ROUTING_ZONE_KEY, "default"))
+
+
+func _corridor_zones_can_merge(zone_a: String, zone_b: String) -> bool:
+	if zone_a.is_empty() or zone_b.is_empty():
+		return true
+	if zone_a == "default" or zone_b == "default":
+		return true
+	return zone_a == zone_b
+
+
 func _clean_collinear(pts: PackedVector3Array) -> PackedVector3Array:
 	if pts.size() <= 2: return pts
 	var out := PackedVector3Array([pts[0]])
 	for i in range(1, pts.size() - 1):
 		var prev := out[-1]
 		var curr := pts[i]
-		var next := pts[i+1]
+		var next := pts[i + 1]
 		
 		var d1 := Vector3(signf(curr.x - prev.x), 0, signf(curr.z - prev.z))
 		var d2 := Vector3(signf(next.x - curr.x), 0, signf(next.z - curr.z))
@@ -817,6 +1246,32 @@ func _make_box(size: Vector3, pos: Vector3) -> void:
 	box.position = to_local(pos)
 	_csg_root.add_child(box)
 
+func seal_unused_gateways(rooms: Array) -> void:
+	if _csg_root == null:
+		push_warning("CorridorNetwork: seal_unused_gateways called before build()")
+		return
+	for room in rooms:
+		if not room is BaseRoom:
+			continue
+		for gateway in (room as BaseRoom).get_gateways():
+			if gateway.connected_edges.is_empty():
+				_seal_gateway(gateway)
+
+
+func _seal_gateway(gateway: Gateway) -> void:
+	var dir3 := _snap_to_cardinal(-gateway.global_transform.basis.z)
+	var base_pos := gateway.global_position
+	var depth := SLAB_T * 6.0
+	var size: Vector3
+	if absf(dir3.x) > 0.5:
+		size = Vector3(depth, CORRIDOR_HEIGHT, CORRIDOR_WIDTH)
+	else:
+		size = Vector3(CORRIDOR_WIDTH, CORRIDOR_HEIGHT, depth)
+	var center_pos := base_pos + dir3 * (depth * 0.5)
+	center_pos.y += CORRIDOR_HEIGHT * 0.5
+	_make_box(size, center_pos)
+
+
 func get_room_aabbs() -> Array[AABB]:
 	return _room_aabbs
 
@@ -828,5 +1283,262 @@ func _candidate_aabbs_hit_rooms(candidate_aabbs: Array[AABB]) -> bool:
 		for existing in _room_aabbs:
 			if candidate.grow(0.25).intersects(existing.grow(0.25)):
 				return true
+
+	return false
+
+func _truncate_room_aabbs(target_size: int) -> void:
+	while _room_aabbs.size() > target_size:
+		_room_aabbs.pop_back()
+
+func _remember_stair_aabbs(stair_room: BaseRoom) -> void:
+	for world_aabb in stair_room.get_world_aabbs():
+		_stair_aabbs.append(world_aabb)
+
+func _is_stair_aabb(aabb: AABB) -> bool:
+	for stair_aabb in _stair_aabbs:
+		if aabb.position.distance_to(stair_aabb.position) < 0.1 and aabb.size.distance_to(stair_aabb.size) < 0.1:
+			return true
+
+	return false
+
+func _edge_blocks_reserved_gateway_throat(
+	p1: Vector2i,
+	p2: Vector2i,
+	min_y: float,
+	max_y: float,
+	ignored_gateway_owner_edge_id: String = ""
+) -> bool:
+	var p1f := Vector2(p1) / GRID_SCALE
+	var p2f := Vector2(p2) / GRID_SCALE
+
+	var edge_rect: Rect2
+	var w := CORRIDOR_WIDTH
+
+	if p1.x == p2.x:
+		var min_z := minf(p1f.y, p2f.y)
+		var max_z := maxf(p1f.y, p2f.y)
+		edge_rect = Rect2(
+			p1f.x - w * 0.5,
+			min_z - w * 0.5,
+			w,
+			(max_z - min_z) + w
+		)
+	else:
+		var min_x := minf(p1f.x, p2f.x)
+		var max_x := maxf(p1f.x, p2f.x)
+		edge_rect = Rect2(
+			min_x - w * 0.5,
+			p1f.y - w * 0.5,
+			(max_x - min_x) + w,
+			w
+		)
+
+	for gateway_data in _reserved_gateway_throats:
+		var owner_edge_id := str(gateway_data.get("owner_edge_id", ""))
+
+		if not ignored_gateway_owner_edge_id.is_empty() and owner_edge_id == ignored_gateway_owner_edge_id:
+			continue
+
+		var other_zone := str(gateway_data.get("routing_zone", "default"))
+
+		# Critical:
+		# Reserved gateway throats only block cross-zone routing.
+		# Same-zone corridors are allowed to merge freely.
+		if _corridor_zones_can_merge(_active_routing_zone, other_zone):
+			continue
+
+		var gw_pos: Vector3 = gateway_data["pos"]
+		var gw_dir: Vector2 = gateway_data["dir"]
+
+		if gw_dir == Vector2.ZERO:
+			continue
+
+		if gw_pos.y + CORRIDOR_HEIGHT <= min_y:
+			continue
+
+		if gw_pos.y >= max_y + CORRIDOR_HEIGHT:
+			continue
+
+		var throat_rect := _gateway_throat_rect(gw_pos, gw_dir)
+
+		if edge_rect.intersects(throat_rect):
+			return true
+
+	return false
+
+func _gateway_throat_rect(gw_pos: Vector3, gw_dir: Vector2) -> Rect2:
+	var length := float(GATEWAY_RESERVED_THROAT_STEPS) / GRID_SCALE
+	var half_w := GATEWAY_RESERVED_THROAT_HALF_WIDTH
+
+	var x := gw_pos.x
+	var z := gw_pos.z
+
+	if absf(gw_dir.x) > absf(gw_dir.y):
+		var x_min := x if gw_dir.x > 0.0 else x - length
+		return Rect2(
+			x_min,
+			z - half_w,
+			length,
+			half_w * 2.0
+		)
+
+	var z_min := z if gw_dir.y > 0.0 else z - length
+	return Rect2(
+		x - half_w,
+		z_min,
+		half_w * 2.0,
+		length
+	)
+
+func _pre_register_connection_gateways(connections: Array) -> void:
+	for connection in connections:
+		var pc := connection as PhysicalConnection
+		if pc == null:
+			continue
+
+		var edge := pc.logical_edge
+		var old_zone := _active_routing_zone
+		var old_edge_id := _active_edge_id
+
+		_active_routing_zone = _get_edge_routing_zone(edge)
+		_active_edge_id = edge.id if edge != null else ""
+
+		if pc.from_anchor != null and pc.from_anchor.gateway != null:
+			_register_reserved_gateway_throat(pc.from_anchor.gateway, edge)
+
+		if pc.to_anchor != null and pc.to_anchor.gateway != null:
+			_register_reserved_gateway_throat(pc.to_anchor.gateway, edge)
+
+		_active_routing_zone = old_zone
+		_active_edge_id = old_edge_id
+
+func _register_reserved_gateway_throat(gateway: Marker3D, owner_edge: LogicalEdge = null) -> void:
+	if gateway == null:
+		return
+
+	if _reserved_gateway_throat_already_registered(gateway, owner_edge):
+		return
+
+	var dir3 := _snap_to_cardinal(-gateway.global_transform.basis.z)
+	var dir2 := Vector2(dir3.x, dir3.z)
+
+	_reserved_gateway_throats.append({
+		"pos": gateway.global_position,
+		"dir": dir2,
+		"owner_edge_id": owner_edge.id if owner_edge != null else "",
+		"routing_zone": _active_routing_zone
+	})
+
+func _reserved_gateway_throat_already_registered(gateway: Marker3D, owner_edge: LogicalEdge = null) -> bool:
+	if gateway == null:
+		return true
+
+	var edge_id := owner_edge.id if owner_edge != null else ""
+	var pos := gateway.global_position
+
+	for data in _reserved_gateway_throats:
+		var existing_pos: Vector3 = data["pos"]
+
+		if existing_pos.distance_to(pos) > 0.05:
+			continue
+
+		if str(data.get("owner_edge_id", "")) == edge_id:
+			return true
+
+	return false
+
+func _gateway_opening_already_registered(gateway: Marker3D, owner_edge: LogicalEdge = null) -> bool:
+	var edge_id := owner_edge.id if owner_edge != null else ""
+	var pos := gateway.global_position
+
+	for data in _gateway_openings:
+		var existing_pos: Vector3 = data["pos"]
+		if existing_pos.distance_to(pos) > 0.05:
+			continue
+
+		if str(data.get("owner_edge_id", "")) == edge_id:
+			return true
+
+	return false
+
+func _generate_gateway_corner_plugs() -> void:
+	for gw_data in _gateway_openings:
+		var gw_pos: Vector3 = gw_data["pos"]
+		var gw_dir: Vector2 = gw_data["dir"]
+
+		if gw_dir == Vector2.ZERO:
+			continue
+
+		_generate_gateway_corner_plugs_for(gw_pos, gw_dir)
+
+func _generate_gateway_corner_plugs_for(gw_pos: Vector3, gw_dir: Vector2) -> void:
+	var h := CORRIDOR_HEIGHT
+	var t := SLAB_T
+	var half_w := CORRIDOR_WIDTH * 0.5
+
+	var side_a := Vector2(-gw_dir.y, gw_dir.x)
+	var side_b := -side_a
+
+	_try_make_gateway_side_plug(gw_pos, gw_dir, side_a, half_w, h, t)
+	_try_make_gateway_side_plug(gw_pos, gw_dir, side_b, half_w, h, t)
+
+func _try_make_gateway_side_plug(
+	gw_pos: Vector3,
+	gw_dir: Vector2,
+	side_dir: Vector2,
+	half_w: float,
+	h: float,
+	t: float
+) -> void:
+	# If corridor/room footprint exists on this side, no plug is needed.
+	var side_probe := Vector2(gw_pos.x, gw_pos.z) + side_dir * (half_w + t * 2.0)
+	
+	if _gateway_side_has_room_support(gw_pos, side_dir):
+		return
+	
+	if _point_inside_any_same_y_footprint(side_probe, gw_pos.y):
+		return
+
+	# Build a short wall running outward from the room along the gateway side.
+	# This closes the exposed corner gap when the gateway is at a room corner.
+	var plug_len := CORRIDOR_WIDTH
+	var plug_center_2d := Vector2(gw_pos.x, gw_pos.z)
+	plug_center_2d += side_dir * (half_w + t * 0.5)
+	plug_center_2d += gw_dir * (plug_len * 0.5)
+
+	var size: Vector3
+	var pos := Vector3(plug_center_2d.x, gw_pos.y + h * 0.5, plug_center_2d.y)
+
+	if absf(gw_dir.x) > absf(gw_dir.y):
+		# Plug wall runs along X, thickness along Z.
+		size = Vector3(plug_len, h, t)
+	else:
+		# Plug wall runs along Z, thickness along X.
+		size = Vector3(t, h, plug_len)
+
+	_make_box(size, pos)
+
+func _point_inside_any_same_y_footprint(point: Vector2, y: float) -> bool:
+	for fp_data in _footprints:
+		var fp_y := float(fp_data["y"])
+		if absf(fp_y - y) > Y_EPS:
+			continue
+
+		var rect := fp_data["rect"] as Rect2
+		if rect.has_point(point):
+			return true
+
+	return false
+
+func _gateway_side_has_room_support(gw_pos: Vector3, side_dir: Vector2) -> bool:
+	var probe := Vector3(
+		gw_pos.x + side_dir.x * (CORRIDOR_WIDTH * 0.5 + 0.15),
+		gw_pos.y + 0.5,
+		gw_pos.z + side_dir.y * (CORRIDOR_WIDTH * 0.5 + 0.15)
+	)
+
+	for aabb in _room_aabbs:
+		if aabb.grow(0.05).has_point(probe):
+			return true
 
 	return false

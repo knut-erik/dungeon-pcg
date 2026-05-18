@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3 uid="uid://dq71x8yoqvry1"]
+
+[ext_resource type="Script" uid="uid://d114me3li3upg" path="res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/LockTriggerArea.gd" id="1_nlcky"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_38lwm"]
+
+[node name="LockTriggerArea" type="Node3D"]
+script = ExtResource("1_nlcky")
+
+[node name="TriggerArea" type="Area3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="TriggerArea"]
+shape = SubResource("BoxShape3D_38lwm")

@@ -8,7 +8,7 @@
 [resource]
 script = ExtResource("3_5utcb")
 room_scene = ExtResource("2_xmpst")
-possible_tags = Array[String](["Alive"])
+possible_tags = Array[String](["Dead"])
 width_param = ExtResource("4_8r0cu")
 length_param = ExtResource("1_sv4ye")
 metadata/_custom_type_script = "uid://djoai4k68rbwe"

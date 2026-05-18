@@ -2,6 +2,8 @@
 extends RefCounted
 class_name GraphRewriter
 
+const ROUTING_ZONE_KEY := "routing_zone"
+
 var room_library: Array[RoomBlueprint]
 var num_challenges: int = 3
 var create_loop: bool = true
@@ -14,7 +16,9 @@ func _init(lib: Array[RoomBlueprint], challenge_count: int = 3, should_create_lo
 
 func generate() -> LogicalGraph:
 	var graph := LogicalGraph.new()
-
+	
+	_debug_print_room_library()
+	
 	var start_node := _create_basic_node("Entrance", "start_01")
 	var boss_node := _create_basic_node("Boss", "boss_01")
 
@@ -51,9 +55,47 @@ func generate() -> LogicalGraph:
 
 		if boss_target and graph.find_edge(boss_target, start_node) == null:
 			var loop_edge := graph._connect(boss_target, start_node, "boss_return", ["loop", "boss_return"])
-			loop_edge.requirements["preferred_from_gateway_role"] = "loop_return"
-			loop_edge.requirements["preferred_to_gateway_role"] = "entrance"
 
+			loop_edge.requirements["preferred_from_gateway_role"] = "loop_return"
+			loop_edge.requirements["preferred_to_gateway_role"] = "loop_return"
+
+			var loop_lock_id := "boss_loop_%s" % loop_edge.id
+
+			loop_edge.custom_data["lock_id"] = loop_lock_id
+			loop_edge.custom_data["loop_unlocks_from_boss_side"] = true
+
+			# Boss-side collision area. Entering this activates the linked false door.
+			_add_edge_component(
+				loop_edge,
+				_make_lock_component_descriptor(
+					"trigger_%s" % loop_edge.id,
+					"lock_trigger",
+					loop_lock_id,
+					"lock_trigger_area",
+					"trigger_volume",
+					"loop_return",
+					"from",
+					"trigger"
+				)
+			)
+
+			# Entrance-side false door. This blocks the return loop from being used early.
+			_add_edge_component(
+				loop_edge,
+				_make_lock_component_descriptor(
+					"false_door_%s" % loop_edge.id,
+					"false_door",
+					loop_lock_id,
+					"false_door_blocker",
+					"animated_mesh",
+					"loop_return",
+					"to",
+					"door"
+				)
+			)
+
+	_annotate_routing_zones(graph, start_node)
+	_debug_print_graph(graph)
 	return graph
 
 
@@ -81,62 +123,143 @@ func _find_first_node_with_tag(graph: LogicalGraph, tag: String) -> LogicalNode:
 
 	return null
 
-'''extends RefCounted
-class_name GraphRewriter
+# ------------------------------------------------------------------------------
 
-var graph: Array[LogicalNode] = []
+const COMPONENT_DESCRIPTORS_KEY := "dungeon_components"
 
-# Tar en array av blueprints och returnerar ett matchande rum
-func get_blueprint(library: Array[RoomBlueprint], target_tag: String) -> RoomBlueprint:
-	var valid = []
-	for bp in library:
-		if bp.possible_tags.has(target_tag):
-			valid.append(bp)
-	return valid.pick_random() if valid.size() > 0 else null
 
-# Regel 1: Lägg till en utmaning mellan Start och Boss
-func rule_insert_challenge(library: Array[RoomBlueprint]):
-	# Leta efter mönstret: [Entrance] -> [Boss]
-	for i in range(graph.size() - 1):
-		var node_a = graph[i]
-		var node_b = graph[i+1]
-		
-		if node_a.assigned_tags.has("Entrance") and node_b.assigned_tags.has("Boss"):
-			var bp = get_blueprint(library, "Alive")
-			if bp:
-				var new_node = LogicalNode.new()
-				new_node.id = "challenge_" + str(randi())
-				new_node.assigned_tags.assign(["Alive"])
-				new_node.blueprint = bp
-				
-				# Skjut in noden i arrayen
-				graph.insert(i + 1, new_node)
-				return true # Regeln applicerades
-	return false
+func _add_edge_component(edge: LogicalEdge, descriptor: Dictionary) -> void:
+	var components: Array = edge.custom_data.get(COMPONENT_DESCRIPTORS_KEY, [])
+	components.append(descriptor)
+	edge.custom_data[COMPONENT_DESCRIPTORS_KEY] = components
 
-# Regel 2: Lägg till Lock & Key innan Boss
-func rule_lock_and_key(library: Array[RoomBlueprint]):
-	# Leta efter Bossen
-	for i in range(1, graph.size()):
-		if graph[i].assigned_tags.has("Boss"):
-			var bp_lock = get_blueprint(library, "Locked")
-			var bp_key = get_blueprint(library, "Key")
-			
-			if bp_lock and bp_key:
-				var lock_node = LogicalNode.new()
-				lock_node.id = "lock_" + str(randi())
-				lock_node.assigned_tags.assign(["Locked"])
-				lock_node.blueprint = bp_lock
-				
-				var key_node = LogicalNode.new()
-				key_node.id = "key_" + str(randi())
-				key_node.assigned_tags.assign(["Key"])
-				key_node.blueprint = bp_key
-				
-				# Skjut in låset innan bossen
-				graph.insert(i, lock_node)
-				
-				# Skjut in nyckeln innan låset
-				graph.insert(i, key_node)
-				return true
-	return false'''
+
+func _make_lock_component_descriptor(
+	component_id: String,
+	component_type: String,
+	lock_id: String,
+	scene_key: String,
+	socket_role: String = "",
+	gateway_role: String = "",
+	edge_side: String = "",
+	agent_tag: String = "",
+	agent_tags: Array[String] = []
+) -> Dictionary:
+	var descriptor := {
+		"component_id": component_id,
+		"component_type": component_type,
+		"lock_id": lock_id,
+		"scene_key": scene_key,
+		"socket_role": socket_role,
+		"gateway_role": gateway_role,
+		"edge_side": edge_side
+	}
+	if not agent_tag.is_empty():
+		descriptor["agent_tag"] = agent_tag
+	if not agent_tags.is_empty():
+		descriptor["agent_tags"] = agent_tags
+	return descriptor
+
+func _annotate_routing_zones(graph: LogicalGraph, start_node: LogicalNode) -> void:
+	var pre_lock_nodes := {}
+	var queue: Array[LogicalNode] = [start_node]
+	pre_lock_nodes[start_node] = true
+
+	while not queue.is_empty():
+		var node: LogicalNode = queue.pop_front()
+
+		for edge in node.out_edges:
+			if edge == null:
+				continue
+
+			if edge.edge_type == "locked":
+				continue
+
+			if edge.edge_type == "boss_return" or edge.tags.has("loop"):
+				continue
+
+			var next_node := edge.to_node
+			if next_node == null or pre_lock_nodes.has(next_node):
+				continue
+
+			pre_lock_nodes[next_node] = true
+			queue.append(next_node)
+
+	for edge in graph.edges:
+		if edge == null:
+			continue
+
+		if edge.edge_type == "boss_return" or edge.tags.has("loop"):
+			edge.custom_data[ROUTING_ZONE_KEY] = "post_lock"
+			continue
+
+		if edge.edge_type == "locked":
+			edge.custom_data[ROUTING_ZONE_KEY] = "post_lock"
+			edge.custom_data["is_lock_boundary"] = true
+			continue
+
+		if pre_lock_nodes.has(edge.from_node) and pre_lock_nodes.has(edge.to_node):
+			edge.custom_data[ROUTING_ZONE_KEY] = "pre_lock"
+		else:
+			edge.custom_data[ROUTING_ZONE_KEY] = "post_lock"
+
+
+func _debug_print_room_library() -> void:
+	print("")
+	print("========== ROOM LIBRARY ==========")
+
+	for blueprint in room_library:
+		if blueprint == null:
+			print("  null blueprint")
+			continue
+
+		print(
+			"  blueprint=",
+			blueprint.resource_path,
+			" possible_tags=",
+			blueprint.possible_tags
+		)
+
+	print("==================================")
+	print("")
+
+func _debug_print_graph(graph: LogicalGraph) -> void:
+	print("")
+	print("========== GENERATED LOGICAL GRAPH ==========")
+
+	print("Nodes:")
+	for node in graph.nodes:
+		print(
+			"  NODE id=",
+			node.id,
+			" assigned_tags=",
+			node.assigned_tags,
+			" blueprint=",
+			node.blueprint.resource_path if node.blueprint else "null",
+			" custom_data=",
+			node.custom_data
+		)
+
+	print("Edges:")
+	for edge in graph.edges:
+		print(
+			"  EDGE id=",
+			edge.id,
+			" ",
+			edge.from_node.id if edge.from_node else "null",
+			" -> ",
+			edge.to_node.id if edge.to_node else "null",
+			" type=",
+			edge.edge_type,
+			" tags=",
+			edge.tags,
+			" requirements=",
+			edge.requirements,
+			" effects=",
+			edge.effects,
+			" custom_data=",
+			edge.custom_data
+		)
+
+	print("=============================================")
+	print("")

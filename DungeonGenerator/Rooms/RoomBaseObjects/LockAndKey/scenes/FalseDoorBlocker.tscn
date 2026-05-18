@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3 uid="uid://djppgn2ks70wf"]
+
+[ext_resource type="Script" uid="uid://ba4uvq0opjatc" path="res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/FalseDoorBlocker.gd" id="1_jy83v"]
+
+[node name="FalseDoorBlocker" type="Node3D"]
+script = ExtResource("1_jy83v")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="."]
+use_collision = true
+
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
+editor_description = "Used for Raycast"
