@@ -48,13 +48,15 @@ func build(connections: Array, room_aabbs: Array, room_library: Array[RoomBluepr
 	
 	_csg_root.use_collision = true
 	
-	var mat := StandardMaterial3D.new()
-	mat.albedo_texture = load("res://Assets/texture/RockPillar/Color.png")
-	mat.normal_enabled = true
-	mat.normal_texture = load("res://Assets/texture/RockPillar/Normal.png")
-	mat.heightmap_enabled = true
-	mat.heightmap_texture = load("res://Assets/texture/RockPillar/Displacement.exr")
-	mat.heightmap_scale = 0.15
+	var mat := load("res://Assets/texture/pavingstones_moss_most/Pavingstones_moss_most.tres")
+	
+	#var mat := StandardMaterial3D.new()
+	#mat.albedo_texture = load("res://Assets/texture/RockPillar/Color.png")
+	#mat.normal_enabled = true
+	#mat.normal_texture = load("res://Assets/texture/RockPillar/Normal.png")
+	#mat.heightmap_enabled = true
+	#mat.heightmap_texture = load("res://Assets/texture/RockPillar/Displacement.exr")
+	#mat.heightmap_scale = 0.15
 	_csg_root.material_override = mat
 	
 	_room_aabbs.assign(room_aabbs)
