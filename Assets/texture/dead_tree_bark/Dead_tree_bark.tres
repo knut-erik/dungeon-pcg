@@ -1,0 +1,17 @@
+[gd_resource type="StandardMaterial3D" load_steps=6 format=3 uid="uid://bnp3m6jllga6k"]
+
+[ext_resource type="Texture2D" uid="uid://tmemtnbmky20" path="res://Assets/texture/dead_tree_bark/japanese_sycamore_diff_240p.png" id="1_0oc50"]
+[ext_resource type="Texture2D" uid="uid://q378hqttwnr1" path="res://Assets/texture/dead_tree_bark/japanese_sycamore_ao_240p.png" id="2_fxxbr"]
+[ext_resource type="Texture2D" uid="uid://iknc2h6wkjgf" path="res://Assets/texture/dead_tree_bark/japanese_sycamore_disp_240p.png" id="3_jq3qm"]
+[ext_resource type="Texture2D" uid="uid://chpef2jmid8hk" path="res://Assets/texture/dead_tree_bark/japanese_sycamore_nor_gl_240p.png" id="4_58mkf"]
+[ext_resource type="Texture2D" uid="uid://bcqjslranalou" path="res://Assets/texture/dead_tree_bark/japanese_sycamore_rough_240p.png" id="5_r2bt4"]
+
+[resource]
+albedo_texture = ExtResource("1_0oc50")
+roughness_texture = ExtResource("5_r2bt4")
+normal_enabled = true
+normal_texture = ExtResource("4_58mkf")
+ao_enabled = true
+ao_texture = ExtResource("2_fxxbr")
+heightmap_enabled = true
+heightmap_texture = ExtResource("3_jq3qm")

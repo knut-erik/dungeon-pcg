@@ -1,8 +1,10 @@
-[gd_scene load_steps=8 format=4 uid="uid://cn8giqi5ia6mp"]
+[gd_scene load_steps=11 format=4 uid="uid://cn8giqi5ia6mp"]
 
 [ext_resource type="Texture2D" uid="uid://cy5pk5td8fmb1" path="res://Assets/modles/Oak_trees/Trees_NormalTree_Bark.png" id="1_k5fn7"]
 [ext_resource type="Texture2D" uid="uid://c788qbday68xi" path="res://Assets/modles/Oak_trees/Trees_NormalTree_Bark_Normal.png" id="2_ucva4"]
 [ext_resource type="Texture2D" uid="uid://dwj4la0xkfyav" path="res://Assets/modles/Oak_trees/Trees_NormalTree_Leaves.png" id="3_wd6pp"]
+[ext_resource type="Material" uid="uid://dajbrt7c6kmbl" path="res://Assets/texture/Oak_bark/Oak_bark.tres" id="4_488q8"]
+[ext_resource type="Texture2D" uid="uid://bdw6viear4qea" path="res://Assets/modles/Oak_trees/Trees_NormalTree_Leaves_edit.png" id="5_x827l"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_b6nxf"]
 resource_name = "NormalTree_Bark"
@@ -87,7 +89,15 @@ _surfaces = [{
 blend_shape_mode = 0
 shadow_mesh = SubResource("ArrayMesh_i2o61")
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_egg3y"]
+transparency = 2
+alpha_scissor_threshold = 0.5
+alpha_antialiasing_mode = 0
+albedo_texture = ExtResource("5_x827l")
+
 [node name="NormalTree_5" type="MeshInstance3D"]
 transform = Transform3D(100, 0, 0, 0, -1.1920931e-05, 100, 0, -100, -1.1920931e-05, 0, 0, 0)
 mesh = SubResource("ArrayMesh_w0tgn")
 skeleton = NodePath("")
+surface_material_override/0 = ExtResource("4_488q8")
+surface_material_override/1 = SubResource("StandardMaterial3D_egg3y")
