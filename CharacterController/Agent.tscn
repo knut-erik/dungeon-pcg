@@ -4,14 +4,10 @@
 [ext_resource type="Script" uid="uid://chpvvrrjecl0e" path="res://CharacterController/ai_controller.gd" id="2_pd0mg"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_kouoa"]
-radius = 0.3
+radius = 0.2
 height = 1.7
 
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_kouoa"]
-radius = 0.3
-height = 1.7
-
-[node name="Agent" type="CharacterBody3D"]
+[node name="Agent" type="CharacterBody3D" groups=["player"]]
 script = ExtResource("1_kouoa")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]

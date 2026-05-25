@@ -24,6 +24,9 @@ enum GameState {
 
 @export_category("Interaction")
 @export var interact_distance: float = 3.0
+@export var debug_raycast_metadata := true # To stop spam - potentially only update when object changes?
+var _last_debug_looked_object: Node = null
+var _last_debug_looked_tags: Array[String] = []
 
 @onready var head: Node3D = $Head
 @onready var interact_ray: RayCast3D = $Head/InteractRay
@@ -172,8 +175,66 @@ func _update_looked_object() -> void:
 	var collider := interact_ray.get_collider()
 
 	if collider is Node:
-		looked_object = collider
-		looked_tags = _get_rl_tags(collider)
+		var node := collider as Node
+		looked_object = _find_agent_object(node)
+		looked_tags = _get_rl_tags_from_hierarchy(node)
+
+		if looked_object != null and debug_raycast_metadata:
+				var object_changed := looked_object != _last_debug_looked_object
+				var tags_changed := looked_tags != _last_debug_looked_tags
+
+				if object_changed or tags_changed:
+					_last_debug_looked_object = looked_object
+					_last_debug_looked_tags = looked_tags.duplicate()
+
+					print(
+						"Player raycast hit: ",
+						looked_object.name if looked_object else "null",
+						" tags=",
+						looked_tags,
+						" component_type=",
+						str(looked_object.get_meta("component_type", "")) if looked_object else "",
+						" lock_id=",
+						str(looked_object.get_meta("lock_id", "")) if looked_object else ""
+					)
+
+
+func _find_agent_object(start_node: Node) -> Node:
+	var node: Node = start_node
+
+	while node != null:
+		if node.has_method("get_rl_tags"):
+			return node
+
+		if node.has_meta("agent_tags"):
+			return node
+
+		if node.has_meta("semantic_tag"):
+			return node
+
+		if node.has_method("interact"):
+			return node
+
+		node = node.get_parent()
+
+	return start_node
+
+
+func _get_rl_tags_from_hierarchy(start_node: Node) -> Array[String]:
+	var tags: Array[String] = []
+	var node: Node = start_node
+
+	while node != null:
+		for tag in _get_rl_tags(node):
+			if not tags.has(tag):
+				tags.append(tag)
+
+		if node.has_method("get_rl_tags") or node.has_meta("agent_tags") or node.has_meta("semantic_tag"):
+			break
+
+		node = node.get_parent()
+
+	return tags
 
 
 func _get_rl_tags(node: Node) -> Array[String]:
@@ -181,12 +242,29 @@ func _get_rl_tags(node: Node) -> Array[String]:
 
 	if node.has_method("get_rl_tags"):
 		for tag in node.get_rl_tags():
-			tags.append(str(tag))
+			var tag_string := str(tag)
+			if not tags.has(tag_string):
+				tags.append(tag_string)
+
+	if node.has_meta("agent_tags"):
+		var metadata_tags = node.get_meta("agent_tags")
+		if metadata_tags is Array:
+			for tag in metadata_tags:
+				var tag_string := str(tag)
+				if not tags.has(tag_string):
+					tags.append(tag_string)
+
+	if node.has_meta("semantic_tag"):
+		var semantic_tag := str(node.get_meta("semantic_tag"))
+		if not semantic_tag.is_empty() and not tags.has(semantic_tag):
+			tags.append(semantic_tag)
 
 	for group_name in node.get_groups():
 		var group_string := str(group_name)
 		if group_string.begins_with("tag_"):
-			tags.append(group_string.trim_prefix("tag_"))
+			var group_tag := group_string.trim_prefix("tag_")
+			if not tags.has(group_tag):
+				tags.append(group_tag)
 
 	return tags
 
@@ -195,13 +273,32 @@ func _try_interact() -> void:
 	if looked_object == null:
 		return
 
-	if looked_object.has_method("interact"):
-		looked_object.interact(self)
+	var interactable := _find_interactable(looked_object)
+
+	if interactable == null:
+		print("Player interact: looked object has no interact method: ", looked_object.name)
 		return
 
-	var parent := looked_object.get_parent()
-	if parent and parent.has_method("interact"):
-		parent.interact(self)
+	print(
+		"Player interact: ",
+		interactable.name,
+		" tags=",
+		_get_rl_tags_from_hierarchy(interactable)
+	)
+
+	interactable.interact(self)
+
+
+func _find_interactable(start_node: Node) -> Node:
+	var node: Node = start_node
+
+	while node != null:
+		if node.has_method("interact"):
+			return node
+
+		node = node.get_parent()
+
+	return null
 
 
 func damage(amount: int) -> void:

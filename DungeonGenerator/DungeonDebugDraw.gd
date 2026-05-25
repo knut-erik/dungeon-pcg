@@ -59,16 +59,16 @@ func draw_debug(network: CorridorNetwork, rooms: Array[BaseRoom], stair_rooms: A
 	var all_aabbs := network.get_room_aabbs()
 
 	# Build a set of stair AABB positions for O(1) color lookup
-	var stair_positions: Array[Vector3] = []
+	var stair_aabbs: Array[AABB] = []
 	for stair in stair_rooms:
 		for aabb in stair.get_world_aabbs():
-			stair_positions.append(aabb.position)
+			stair_aabbs.append(aabb)
 
 	# Draw all AABBs — magenta for stairs, white for rooms
 	for aabb in all_aabbs:
 		var is_stair := false
-		for sp in stair_positions:
-			if aabb.position.distance_to(sp) < 0.05:
+		for stair_aabb in stair_aabbs:
+			if aabb.position.distance_to(stair_aabb.position) < 0.15 and aabb.size.distance_to(stair_aabb.size) < 0.15:
 				is_stair = true
 				break
 		_draw_aabb_wireframe(aabb, COLOR_STAIRS if is_stair else COLOR_ROOM)

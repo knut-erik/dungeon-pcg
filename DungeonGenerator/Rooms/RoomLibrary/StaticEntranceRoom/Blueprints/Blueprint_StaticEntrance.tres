@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="RoomBlueprint" load_steps=3 format=3 uid="uid://ciul24vai564u"]
+
+[ext_resource type="Script" uid="uid://djoai4k68rbwe" path="res://DungeonGenerator/Rooms/RoomComponents/RoomBlueprint.gd" id="1_cxy3c"]
+[ext_resource type="PackedScene" uid="uid://clfudm1a34xra" path="res://DungeonGenerator/Rooms/RoomLibrary/StaticEntranceRoom/StaticEntranceRoom.tscn" id="1_dui55"]
+
+[resource]
+script = ExtResource("1_cxy3c")
+room_scene = ExtResource("1_dui55")
+possible_tags = Array[String](["Entrance"])
+metadata/_custom_type_script = "uid://djoai4k68rbwe"
