@@ -22,17 +22,10 @@ sky = SubResource("Sky_slqep")
 
 [node name="Node3D" type="Node3D"]
 script = ExtResource("1_nulmw")
-<<<<<<< HEAD
-room_library = Array[ExtResource("2_6h3ij")]([ExtResource("6_dgn0p"), ExtResource("4_8mbj2"), ExtResource("8_8mbj2"), ExtResource("9_htfvw"), ExtResource("10_gefqj"), ExtResource("11_pt085")])
-num_challenges = 10
-=======
 room_library = Array[ExtResource("2_6h3ij")]([ExtResource("3_6ufjc"), ExtResource("5_dqayi"), ExtResource("3_4p0qp"), ExtResource("7_1vdva"), ExtResource("4_8mbj2"), ExtResource("8_8mbj2"), ExtResource("9_gefqj"), ExtResource("10_pt085")])
-num_challenges = null
-create_loop = null
 
 [node name="Camera3D" type="Camera3D" parent="."]
 script = ExtResource("2_sifhu")
->>>>>>> 5acf40f922b1009a42720211544d2807dcd3d27d
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_gaxvh")

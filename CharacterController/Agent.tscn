@@ -7,6 +7,10 @@
 radius = 0.2
 height = 1.7
 
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_pd0mg"]
+radius = 0.2
+height = 1.7
+
 [node name="Agent" type="CharacterBody3D" groups=["player"]]
 script = ExtResource("1_kouoa")
 
@@ -25,7 +29,7 @@ target_position = Vector3(0, -1.5, 0)
 [node name="StatDisplay" type="SubViewport" parent="."]
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
-mesh = SubResource("CapsuleMesh_kouoa")
+mesh = SubResource("CapsuleMesh_pd0mg")
 
 [node name="AIController3D" type="Node3D" parent="."]
 script = ExtResource("2_pd0mg")
