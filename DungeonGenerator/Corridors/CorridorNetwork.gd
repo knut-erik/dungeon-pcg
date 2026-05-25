@@ -1,12 +1,12 @@
 extends Node3D
 class_name CorridorNetwork
 
-const CORRIDOR_WIDTH  := 3.0
+const CORRIDOR_WIDTH := 3.0
 const CORRIDOR_HEIGHT := 3.4
-const SLAB_T          := 0.15 # T for threshold 
+const SLAB_T := 0.15 # T for threshold
 
 # TODO: Explain constants with comments
-const GRID_SCALE      := 2.0  # SCALE = 2.0 means 1 Grid Unit = 0.5 World Units. This perfectly captures 0.5 offset gateways without floating point errors!
+const GRID_SCALE := 2.0 # SCALE = 2.0 means 1 Grid Unit = 0.5 World Units. This perfectly captures 0.5 offset gateways without floating point errors!
 const WALL_MERGE_EPS := 0.08
 const Y_EPS := 0.15
 const ROOM_WALL_CUT_MARGIN := 0.20
@@ -28,7 +28,7 @@ var _room_aabbs: Array[AABB] = []
 var _stair_rooms: Array[BaseRoom] = []
 var _stair_aabbs: Array[AABB] = []
 var _footprints: Array[Dictionary] = []
-var _gateway_openings: Array[Dictionary] = []  # { "pos": Vector3, "dir": Vector2 }
+var _gateway_openings: Array[Dictionary] = [] # { "pos": Vector3, "dir": Vector2 }
 var _room_library: Array[RoomBlueprint] = []
 var _active_edge_id: String = ""
 var _reserved_gateway_throats: Array[Dictionary] = []
@@ -210,15 +210,15 @@ func _route_from_point(start_pos: Vector3, gb: Marker3D, quiet: bool = false) ->
 	var dir_bi := Vector2i(roundi(out_dir_b.x), roundi(out_dir_b.z))
 
 	var start2i := Vector2i(roundi(start_pos.x * GRID_SCALE), roundi(start_pos.z * GRID_SCALE))
-	var goal2i  := Vector2i(roundi(pos_b.x  * GRID_SCALE), roundi(pos_b.z  * GRID_SCALE))
+	var goal2i := Vector2i(roundi(pos_b.x * GRID_SCALE), roundi(pos_b.z * GRID_SCALE))
 
 	var goal_owner := _find_owner_aabb_index(pos_b, true)
 
 	var path2i := _directional_astar(
 		start2i, goal2i,
-		Vector2i.ZERO, dir_bi,   # ZERO = no first-step constraint on junction side
+		Vector2i.ZERO, dir_bi, # ZERO = no first-step constraint on junction side
 		start_pos.y, start_pos.y,
-		-1, goal_owner,          # junction is in open corridor space, no start exemption
+		-1, goal_owner, # junction is in open corridor space, no start exemption
 		quiet,
 		ASTAR_MAX_ITERATIONS,
 		ASTAR_SEARCH_MARGIN_GRID
@@ -266,8 +266,8 @@ func _route_vertical_connection_with_stair_candidates(ga: Marker3D, gb: Marker3D
 	await stair_room.setup_room(RandomNumberGenerator.new(), dummy_logic)
 	await get_tree().process_frame
 
-	var gw_in_local : Vector3 = stair_room.gateway_in.position
-	var gw_out_local : Vector3 = stair_room.gateway_out.position
+	var gw_in_local: Vector3 = stair_room.gateway_in.position
+	var gw_out_local: Vector3 = stair_room.gateway_out.position
 	var req_length := Vector2(gw_in_local.x, gw_in_local.z).distance_to(Vector2(gw_out_local.x, gw_out_local.z))
 
 	var candidate_dirs := [
@@ -294,7 +294,7 @@ func _route_vertical_connection_with_stair_candidates(ga: Marker3D, gb: Marker3D
 	for origin in candidate_origins:
 		for dir in candidate_dirs:
 			for offset in candidate_offsets:
-				var center_pos : Vector3 = origin + dir * offset
+				var center_pos: Vector3 = origin + dir * offset
 				center_pos.x = snappedf(center_pos.x, 1.0)
 				center_pos.z = snappedf(center_pos.z, 1.0)
 
@@ -387,7 +387,7 @@ func _inject_stairs_and_split(polyline: PackedVector3Array, ga: Marker3D, gb: Ma
 	var chosen_blueprint = stair_blueprints.pick_random()
 	
 	var stair_room = chosen_blueprint.room_scene.instantiate() as BaseRoom
-	get_parent().add_child(stair_room) 
+	get_parent().add_child(stair_room)
 	
 	var dummy_logic = LogicalNode.new()
 	dummy_logic.custom_data["delta_y"] = delta_y
@@ -501,9 +501,9 @@ func _route_connection(
 	var out_dir_b := _snap_to_cardinal(-gb.global_transform.basis.z)
 	
 	var start2i := Vector2i(roundi(pos_a.x * GRID_SCALE), roundi(pos_a.z * GRID_SCALE))
-	var goal2i  := Vector2i(roundi(pos_b.x * GRID_SCALE), roundi(pos_b.z * GRID_SCALE))
-	var dir_ai  := Vector2i(roundi(out_dir_a.x), roundi(out_dir_a.z))
-	var dir_bi  := Vector2i(roundi(out_dir_b.x), roundi(out_dir_b.z))
+	var goal2i := Vector2i(roundi(pos_b.x * GRID_SCALE), roundi(pos_b.z * GRID_SCALE))
+	var dir_ai := Vector2i(roundi(out_dir_a.x), roundi(out_dir_a.z))
+	var dir_bi := Vector2i(roundi(out_dir_b.x), roundi(out_dir_b.z))
 	
 	var min_y := minf(pos_a.y, pos_b.y)
 	var max_y := maxf(pos_a.y, pos_b.y)
@@ -584,7 +584,6 @@ func _directional_astar(
 		max_iterations: int = ASTAR_MAX_ITERATIONS,
 		search_margin_grid: int = ASTAR_SEARCH_MARGIN_GRID
 	) -> Array[Vector2i]:
-
 	if start == goal:
 		return [start, goal]
 
@@ -614,8 +613,8 @@ func _directional_astar(
 
 	var heap := _BinHeap.new()
 	var came_from := {}
-	var g_score := { start: 0.0 }
-	var dist_from_start := { start: 0 }
+	var g_score := {start: 0.0}
+	var dist_from_start := {start: 0}
 	var closed := {}
 	var counter := 0
 
@@ -789,8 +788,8 @@ class _BinHeap:
 
 # ── EXACT COLLISION CHECKING ─────────────────────────────────────────────────
 
-func _is_edge_valid( p1: Vector2i, p2: Vector2i, min_y: float, max_y: float, ignored_aabb_indices: Array[int]) -> bool:
-	var w   := CORRIDOR_WIDTH
+func _is_edge_valid(p1: Vector2i, p2: Vector2i, min_y: float, max_y: float, ignored_aabb_indices: Array[int]) -> bool:
+	var w := CORRIDOR_WIDTH
 	var p1f := Vector2(p1) / GRID_SCALE
 	var p2f := Vector2(p2) / GRID_SCALE
 
@@ -798,15 +797,15 @@ func _is_edge_valid( p1: Vector2i, p2: Vector2i, min_y: float, max_y: float, ign
 	if p1.x == p2.x: # Z movement
 		var min_z := minf(p1f.y, p2f.y)
 		var max_z := maxf(p1f.y, p2f.y)
-		rect = Rect2(p1f.x - w/2.0, min_z - w/2.0, w, (max_z - min_z) + w)
+		rect = Rect2(p1f.x - w / 2.0, min_z - w / 2.0, w, (max_z - min_z) + w)
 	else: # X movement
 		var min_x := minf(p1f.x, p2f.x)
 		var max_x := maxf(p1f.x, p2f.x)
-		rect = Rect2(min_x - w/2.0, p1f.y - w/2.0, (max_x - min_x) + w, w)
+		rect = Rect2(min_x - w / 2.0, p1f.y - w / 2.0, (max_x - min_x) + w, w)
 
 	rect = rect.grow(-0.05)
 
-	var corr_top    := max_y + CORRIDOR_HEIGHT
+	var corr_top := max_y + CORRIDOR_HEIGHT
 	var corr_bottom := min_y
 
 	for i in range(_room_aabbs.size()):
@@ -1087,7 +1086,6 @@ func _get_exposed_intervals(
 		outside_sign: float,
 		wall_y: float
 	) -> Array:
-
 	var uncovered := [[start, end]]
 
 	# Probe just outside the wall, not exactly on the wall line.
@@ -1228,7 +1226,7 @@ func _clean_collinear(pts: PackedVector3Array) -> PackedVector3Array:
 	for i in range(1, pts.size() - 1):
 		var prev := out[-1]
 		var curr := pts[i]
-		var next := pts[i+1]
+		var next := pts[i + 1]
 		
 		var d1 := Vector3(signf(curr.x - prev.x), 0, signf(curr.z - prev.z))
 		var d2 := Vector3(signf(next.x - curr.x), 0, signf(next.z - curr.z))
