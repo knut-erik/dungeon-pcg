@@ -1,40 +1,40 @@
-[gd_scene format=3 uid="uid://dwngcp7nl6jlu"]
+[gd_scene load_steps=5 format=3 uid="uid://dwngcp7nl6jlu"]
 
 [ext_resource type="Script" uid="uid://vbeyayofew5n" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/DefaultRoom.gd" id="1_kdl1w"]
-[ext_resource type="PackedScene" uid="uid://c3vqd3lybvf5" path="res://DungeonGenerator/Rooms/RoomBaseline/BoundingBox.tscn" id="1_sfdtf"]
-[ext_resource type="PackedScene" uid="uid://buhg1tfw82ury" path="res://DungeonGenerator/Rooms/RoomBaseline/Gateway.tscn" id="2_vsc08"]
+[ext_resource type="PackedScene" uid="uid://c3vqd3lybvf5" path="res://DungeonGenerator/Rooms/RoomBaseObjects/BoundingBox.tscn" id="1_sfdtf"]
+[ext_resource type="PackedScene" uid="uid://buhg1tfw82ury" path="res://DungeonGenerator/Rooms/RoomBaseObjects/Gateway.tscn" id="2_vsc08"]
 [ext_resource type="Material" uid="uid://cibcmc5ulitt7" path="res://Assets/Materials/stone_bricks.tres" id="3_lsxgb"]
 
-[node name="Node3D" type="Node3D" unique_id=1638007012]
+[node name="Node3D" type="Node3D"]
 script = ExtResource("1_kdl1w")
 
-[node name="Area3D" parent="." unique_id=1799499990 instance=ExtResource("1_sfdtf")]
+[node name="Area3D" parent="." instance=ExtResource("1_sfdtf")]
 
-[node name="CSGCombiner3D" type="CSGCombiner3D" parent="." unique_id=970732676]
+[node name="CSGCombiner3D" type="CSGCombiner3D" parent="."]
 material_override = ExtResource("3_lsxgb")
 use_collision = true
 
-[node name="CSGBox3D" type="CSGBox3D" parent="CSGCombiner3D" unique_id=1207516522]
+[node name="CSGBox3D" type="CSGBox3D" parent="CSGCombiner3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
 size = Vector3(4, 4, 6)
 
-[node name="CSGBox3D4" type="CSGBox3D" parent="CSGCombiner3D" unique_id=216003327]
+[node name="CSGBox3D4" type="CSGBox3D" parent="CSGCombiner3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
 operation = 2
 size = Vector3(3.9, 3.9, 5.9)
 
-[node name="CSGBox3D2" type="CSGBox3D" parent="CSGCombiner3D" unique_id=902088779]
+[node name="CSGBox3D2" type="CSGBox3D" parent="CSGCombiner3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1.1, 0)
 operation = 2
-size = Vector3(0.5, 2.1, 0.75)
+size = Vector3(1, 2.1, 1)
 
-[node name="Target" parent="CSGCombiner3D/CSGBox3D2" unique_id=1743406746 instance=ExtResource("2_vsc08")]
+[node name="Target" parent="CSGCombiner3D/CSGBox3D2" instance=ExtResource("2_vsc08")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.2, 0)
 
-[node name="CSGBox3D3" type="CSGBox3D" parent="CSGCombiner3D" unique_id=221050731]
+[node name="CSGBox3D3" type="CSGBox3D" parent="CSGCombiner3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 1.1, 0)
 operation = 2
-size = Vector3(0.5, 2.1, 0.75)
+size = Vector3(1, 2.1, 1)
 
-[node name="Target2" parent="CSGCombiner3D/CSGBox3D3" unique_id=499226635 instance=ExtResource("2_vsc08")]
+[node name="Target2" parent="CSGCombiner3D/CSGBox3D3" instance=ExtResource("2_vsc08")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.2, 0)

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RoomBlueprint" format=3 uid="uid://dbaj3m75w2egn"]
+[gd_resource type="Resource" script_class="RoomBlueprint" load_steps=5 format=3 uid="uid://dbaj3m75w2egn"]
 
 [ext_resource type="Resource" uid="uid://bjhu8ioon3m1s" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/Param_DefaultLength.tres" id="1_sv4ye"]
 [ext_resource type="PackedScene" uid="uid://dwngcp7nl6jlu" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/BaseRoom.tscn" id="2_xmpst"]

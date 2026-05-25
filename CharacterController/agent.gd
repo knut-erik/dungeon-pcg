@@ -27,6 +27,7 @@ enum GameState {
 
 @onready var head: Node3D = $Head
 @onready var interact_ray: RayCast3D = $Head/InteractRay
+@onready var agent_controller: AIController3D = $AIController3D
 
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
@@ -55,6 +56,7 @@ func _ready() -> void:
 
 func _input(event: InputEvent) -> void:
 	if use_agent_control:
+		
 		return
 
 	if event is InputEventMouseMotion and game_state == GameState.PLAYING:
@@ -67,6 +69,10 @@ func _input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	use_agent_control = agent_controller.heuristic != "human"
+	set_agent_action(agent_controller.input_actions)
+	print_debug(agent_action)
+	
 	_update_looked_object()
 
 	if game_state != GameState.PLAYING:
@@ -89,8 +95,8 @@ func _read_human_action() -> Dictionary:
 	var move_input := Input.get_vector(
 		"move_left",
 		"move_right",
-		"move_forward",
-		"move_back"
+		"move_up",
+		"move_down"
 	)
 
 	return {
@@ -104,12 +110,7 @@ func _read_human_action() -> Dictionary:
 
 
 func set_agent_action(action: Dictionary) -> void:
-	agent_action["move_x"] = clamp(float(action.get("move_x", 0.0)), -1.0, 1.0)
-	agent_action["move_z"] = clamp(float(action.get("move_z", 0.0)), -1.0, 1.0)
-	agent_action["jump"] = bool(action.get("jump", false))
-	agent_action["interact"] = bool(action.get("interact", false))
-	agent_action["look_yaw"] = clamp(float(action.get("look_yaw", 0.0)), -1.0, 1.0)
-	agent_action["look_pitch"] = clamp(float(action.get("look_pitch", 0.0)), -1.0, 1.0)
+	agent_action = action
 
 
 func _apply_look_action(action: Dictionary) -> void:

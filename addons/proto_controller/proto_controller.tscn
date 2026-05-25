@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://bs72ogkvdd7d6"]
+[gd_scene load_steps=5 format=3 uid="uid://bs72ogkvdd7d6"]
 
 [ext_resource type="Script" uid="uid://rkt7g0olyblm" path="res://addons/proto_controller/proto_controller.gd" id="1_7ntmw"]
 
@@ -13,20 +13,20 @@ height = 1.0
 radius = 0.2
 height = 1.0
 
-[node name="ProtoController" type="CharacterBody3D" unique_id=1594024709]
+[node name="ProtoController" type="CharacterBody3D" groups=["character"]]
 script = ExtResource("1_7ntmw")
 
-[node name="Mesh" type="MeshInstance3D" parent="." unique_id=830576165]
+[node name="Mesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 material_override = SubResource("StandardMaterial3D_iof21")
 cast_shadow = 0
 mesh = SubResource("CapsuleMesh_ucva2")
 
-[node name="Collider" type="CollisionShape3D" parent="." unique_id=1753188577]
+[node name="Collider" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("CapsuleShape3D_iof21")
 
-[node name="Head" type="Node3D" parent="." unique_id=1741800015]
+[node name="Head" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1881483, 0)
 
-[node name="Camera3D" type="Camera3D" parent="Head" unique_id=1327702792]
+[node name="Camera3D" type="Camera3D" parent="Head"]

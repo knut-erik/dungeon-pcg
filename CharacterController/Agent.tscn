@@ -1,8 +1,13 @@
-[gd_scene load_steps=3 format=3 uid="uid://d2mie43rxrka6"]
+[gd_scene load_steps=5 format=3 uid="uid://d2mie43rxrka6"]
 
 [ext_resource type="Script" uid="uid://denrm3efkg4d6" path="res://CharacterController/agent.gd" id="1_kouoa"]
+[ext_resource type="Script" uid="uid://chpvvrrjecl0e" path="res://CharacterController/ai_controller.gd" id="2_pd0mg"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_kouoa"]
+radius = 0.3
+height = 1.7
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_kouoa"]
 radius = 0.3
 height = 1.7
 
@@ -22,3 +27,10 @@ transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0
 target_position = Vector3(0, -1.5, 0)
 
 [node name="StatDisplay" type="SubViewport" parent="."]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("CapsuleMesh_kouoa")
+
+[node name="AIController3D" type="Node3D" parent="."]
+script = ExtResource("2_pd0mg")
+metadata/_custom_type_script = "uid://dcpjaks5n7uor"

@@ -39,12 +39,20 @@ func setup_room(rng: RandomNumberGenerator, logic_node: LogicalNode):
 		
 	bounding_box.position.y = height / 2.0
 	
-	
+	var prev_x = 100
+	var prev_z = 100
 	for i in range(1, height-2):
 		var platform : Node3D = platform_scene.instantiate()
-		platform.position.y = i
-		var x_position = (rng.randf() - 0.5) * (width - 1)
-		var z_position = (rng.randf() - 0.5) * (length - 1)
-		platform.position.x = x_position
-		platform.position.z = z_position
+		var placed = false
+		while !placed:
+			var x_pos = logic_node.blueprint.width_param.sample(rng)
+			var z_pos = logic_node.blueprint.length_param.sample(rng)
+			if abs(x_pos - prev_x) > 0.8 && abs(z_pos - prev_z) > 0.8:
+				platform.position.y = i
+				platform.position.x = x_pos
+				platform.position.z = z_pos
+				placed = true
+				
+				prev_x = x_pos
+				prev_z = z_pos
 		add_child(platform)
