@@ -1,0 +1,121 @@
+[gd_scene load_steps=13 format=3 uid="uid://d1lgjlvvojgdb"]
+
+[ext_resource type="PackedScene" uid="uid://c7kqgl1k10x14" path="res://addons/jar_voxel_terrain/src/chunk.tscn" id="1_7hprh"]
+[ext_resource type="Script" uid="uid://ex608u7ymxbk" path="res://camera_3d.gd" id="2_gtg1g"]
+[ext_resource type="Script" uid="uid://bvbg7kkml7t7p" path="res://debugPath.gd" id="3_gtg1g"]
+[ext_resource type="PackedScene" uid="uid://dnd15ybts1i7v" path="res://DungeonGenerator/Rooms/RoomBaseObjects/Scenes/SceneTransition.tscn" id="4_x3mof"]
+[ext_resource type="Script" uid="uid://ci3vu6rr1p766" path="res://Terrain/SDFBool.gd" id="5_sdfbool"]
+[ext_resource type="Script" uid="uid://bg4ffan2dxtib" path="res://Terrain/TerrainDungeonDirector.gd" id="6_director"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_7hprh"]
+seed = 2
+frequency = 1.0
+fractal_type = 0
+fractal_octaves = 4
+
+[sub_resource type="JarValleyPathBiome" id="JarValleyPathBiome_7hprh"]
+path_width = 17.0
+valley_depth = 0.28
+mountain_steepness = 1.42
+winding_scale = 0.03
+branchiness = 0.5
+town_radius = 64.0
+detail_noise = SubResource("FastNoiseLite_7hprh")
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_gtg1g"]
+frequency = 1.0
+fractal_octaves = 2
+fractal_gain = 0.4
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_sfjcw"]
+seed = 1
+frequency = 1.0
+fractal_octaves = 3
+fractal_lacunarity = 1.8
+fractal_gain = 0.35
+
+[sub_resource type="JarValleyPathSdf" id="JarValleyPathSdf_7hprh"]
+biome_noise = SubResource("FastNoiseLite_gtg1g")
+shape_noise = SubResource("FastNoiseLite_sfjcw")
+biome = SubResource("JarValleyPathBiome_7hprh")
+height_scale = 1.5
+path_length = 280.0
+path_step = 6.0
+main_meander_amplitude = 20.0
+secondary_meander_amplitude = 6.0
+branch_max_count = 10
+branch_min_length = 16.0
+branch_max_length = 64.0
+branch_bend_amplitude = 5.0
+branch_width_scale = 0.8
+cave_radius = 9.0
+mountain_base_height = 3.0
+mountain_relief = 14.0
+ridge_relief = 3.5
+valley_floor_height = 0.0
+valley_floor_relief = 2.5
+carve_depth = 15.0
+wall_falloff = 36.0
+edge_noise_strength = 0.75
+pocket_strength = 0.8
+pocket_threshold = 0.94
+mountain_macro_frequency = 0.013
+mountain_ridge_frequency = 0.02
+floor_detail_frequency = 0.018
+edge_noise_frequency = 0.025
+pocket_frequency = 0.008
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_sdfbool"]
+size = Vector3(12, 12, 34)
+
+[node name="World" type="Node3D"]
+script = ExtResource("6_director")
+openness = 0.3
+
+[node name="JarVoxelTerrain" type="JarVoxelTerrain" parent="." node_paths=PackedStringArray("player_node")]
+player_node = NodePath("../Camera3D")
+size = 9
+chunk_scene = ExtResource("1_7hprh")
+sdf = SubResource("JarValleyPathSdf_7hprh")
+performance_max_concurrent_tasks = 24
+
+[node name="Camera3D" type="Camera3D" parent="."]
+script = ExtResource("2_gtg1g")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.6162802, 0.78752697, 0, -0.78752697, 0.6162802, 0, 0, 0)
+
+[node name="Node" type="Node" parent="."]
+script = ExtResource("3_gtg1g")
+noise = SubResource("FastNoiseLite_gtg1g")
+
+[node name="CaveSpawn" type="Node3D" parent="."]
+transform = Transform3D(-4.371139e-08, 0.25881904, -0.9659258, 0, 0.9659258, 0.25881904, 1, 1.131334e-08, -4.222196e-08, 150, -1, 0)
+
+[node name="SceneTransition" parent="CaveSpawn" instance=ExtResource("4_x3mof")]
+transform = Transform3D(8.17, 0, 0, 0, 8.17, 0, 0, 0, 8.17, -4.7683716e-07, 0.04102087, -0.19184518)
+target_scene = "uid://bubmd1fjgr1si"
+
+[node name="CSGCombiner3D" type="CSGCombiner3D" parent="CaveSpawn"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -11.110398, 0)
+use_collision = true
+
+[node name="CSGBox3D" type="CSGBox3D" parent="CaveSpawn/CSGCombiner3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0067977905, 10.818354, 8.906987)
+use_collision = true
+size = Vector3(8.280411, 9.493591, 26.95729)
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="CaveSpawn/CSGCombiner3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0067977905, 10.818354, 9.434498)
+operation = 2
+use_collision = true
+size = Vector3(8.08, 9.294, 27.912)
+
+[node name="SDFBool" type="Area3D" parent="CaveSpawn"]
+script = ExtResource("5_sdfbool")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CaveSpawn/SDFBool"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 9)
+shape = SubResource("BoxShape3D_sdfbool")

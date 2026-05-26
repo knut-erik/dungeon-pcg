@@ -26,13 +26,15 @@ func setup_room(rng: RandomNumberGenerator, logic_node: LogicalNode):
 	main_room.size = room_size
 	hollowing_room.size = inner_room_size
 	
-	if bounding_box.has_method("set_size"):
-		bounding_box.set_size(room_size)
-		
+	var col_shape = bounding_box.get_node_or_null("CollisionShape3D")
+	if col_shape and col_shape.shape is BoxShape3D:
+		col_shape.shape = col_shape.shape.duplicate()  # break shared resource link
+		col_shape.shape.size = room_size
 	bounding_box.position.y = height / 2.0
 	
+	
 	var walls = [0, 1, 2, 3] 
-	walls.shuffle()
+	_shuffle_array(walls, rng)
 	
 	_place_door_on_wall(door_hole_in, walls[0], room_size, rng)
 	_place_door_on_wall(door_hole_out, walls[1], room_size, rng)
@@ -72,3 +74,10 @@ func _place_door_on_wall(door_csg: CSGBox3D, wall_index: int, room_size_param: V
 		3: 
 			door_csg.position = Vector3(half_w, y_pos, rng.randf_range(-max_z, max_z))
 			door_csg.rotation_degrees.y = -90
+
+func _shuffle_array(items: Array, rng: RandomNumberGenerator) -> void:
+	for i in range(items.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var tmp = items[i]
+		items[i] = items[j]
+		items[j] = tmp

@@ -1,0 +1,21 @@
+[gd_scene load_steps=4 format=3 uid="uid://cko24jsyn28jr"]
+
+[ext_resource type="Script" uid="uid://vwnmju1xbxmu" path="res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/LockableHingeDoor.gd" id="1_6y410"]
+[ext_resource type="PackedScene" uid="uid://hxqx8m16gpc0" path="res://Assets/Mesh/LockAndKey/Door.glb" id="2_fhumo"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_f5kuy"]
+size = Vector3(0.22680664, 2.4106903, 1.4349365)
+
+[node name="HingeDoor" type="Node3D"]
+script = ExtResource("1_6y410")
+animated_node_path = NodePath("DoorPivot")
+
+[node name="DoorPivot" type="Node3D" parent="."]
+
+[node name="Door" parent="DoorPivot" instance=ExtResource("2_fhumo")]
+
+[node name="DoorBody" type="AnimatableBody3D" parent="DoorPivot"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DoorPivot/DoorBody"]
+transform = Transform3D(0.99999976, 0, 0, 0, 0.99999976, 0, 0, 0, 0.99999976, 0.0067138853, 1.2354658, -0.7758175)
+shape = SubResource("BoxShape3D_f5kuy")

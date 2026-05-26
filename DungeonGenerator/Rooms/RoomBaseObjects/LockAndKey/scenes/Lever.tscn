@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3 uid="uid://blb88n6fanaqk"]
+
+[ext_resource type="Script" uid="uid://bhfiv1nuuslyn" path="res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/LockLever.gd" id="1_apln8"]
+[ext_resource type="PackedScene" uid="uid://co55pnib5u4wt" path="res://Assets/Mesh/LockAndKey/Lever.glb" id="2_5jde6"]
+
+[node name="Lever" type="Node3D"]
+script = ExtResource("1_apln8")
+
+[node name="Lever" parent="." instance=ExtResource("2_5jde6")]
+
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
+editor_description = "This is for the raycast"
+transform = Transform3D(20, 0, 0, 0, 42, 0, 0, 0, 30, 0.055, 0, 0)
