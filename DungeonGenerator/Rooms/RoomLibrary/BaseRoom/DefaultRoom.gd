@@ -2,6 +2,8 @@
 extends BaseRoom
 class_name DefaultRoom
 
+const GHOST_ENEMY_SCENE: PackedScene = preload("res://DungeonGenerator/Rooms/RoomObjects/Ghost/GhostEnemy.tscn")
+
 # Hämta referenser baserat på din Scen-struktur
 @onready var bounding_box = $Area3D 
 @onready var main_room = $CSGCombiner3D/CSGBox3D
@@ -43,6 +45,42 @@ func setup_room(rng: RandomNumberGenerator, logic_node: LogicalNode):
 	var center = global_position
 	_ensure_gateway_faces_inward(gateway_in, door_hole_in, center)
 	_ensure_gateway_faces_inward(gateway_out, door_hole_out, center)
+
+	_spawn_enemies(rng, logic_node)
+
+
+func _spawn_enemies(rng: RandomNumberGenerator, logic_node: LogicalNode) -> void:
+	if logic_node == null or logic_node.blueprint == null:
+		return
+
+	if logic_node.blueprint.enemy_density_param == null:
+		return
+
+	var enemy_count: int = roundi(logic_node.blueprint.enemy_density_param.sample(rng))
+	if enemy_count <= 0:
+		return
+
+	var half_w: float = room_size.x * 0.5
+	var half_l: float = room_size.z * 0.5
+	var spawn_margin: float = 1.15
+	var min_x: float = -maxf(0.0, half_w - spawn_margin)
+	var max_x: float = maxf(0.0, half_w - spawn_margin)
+	var min_z: float = -maxf(0.0, half_l - spawn_margin)
+	var max_z: float = maxf(0.0, half_l - spawn_margin)
+
+	for enemy_index: int in range(enemy_count):
+		var ghost: Node3D = GHOST_ENEMY_SCENE.instantiate() as Node3D
+		if ghost == null:
+			continue
+
+		ghost.name = "GhostEnemy%d" % (enemy_index + 1)
+		add_child(ghost)
+		ghost.position = Vector3(
+			rng.randf_range(min_x, max_x),
+			0.0,
+			rng.randf_range(min_z, max_z)
+		)
+		ghost.rotation_degrees.y = rng.randf_range(0.0, 360.0)
 
 func _ensure_gateway_faces_inward(gateway: Marker3D, _door_csg: CSGBox3D, room_center: Vector3) -> void:
 	# The gateway's Z should point INTO room (orthogonal from wall)

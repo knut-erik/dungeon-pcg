@@ -17,7 +17,14 @@ const GATEWAY_RESERVED_THROAT_STEPS := 6
 const GATEWAY_RESERVED_THROAT_HALF_WIDTH := CORRIDOR_WIDTH * 0.5 + 0.10
 const GATEWAY_CORNER_PLUG_OVERLAP := 0.30
 const GATEWAY_CORNER_PLUG_DEPTH := SLAB_T * 2.0
+<<<<<<< Updated upstream
 const STAIR_CLEARANCE_MARGIN := CORRIDOR_WIDTH * 0.5 + ROOM_WALL_CUT_MARGIN + WALL_MERGE_EPS
+=======
+const GATEWAY_CORNER_PLUG_INNER_OVERLAP := 0.30
+const STAIR_CLEARANCE_MARGIN := CORRIDOR_WIDTH * 0.5 + ROOM_WALL_CUT_MARGIN + WALL_MERGE_EPS
+const GATEWAY_CORNER_WRAP_MATCH_TOL := CORRIDOR_WIDTH * 0.75
+const GATEWAY_CORNER_WRAP_SEARCH_DISTANCE := CORRIDOR_WIDTH * 1.5
+>>>>>>> Stashed changes
 
 const ROUTING_ZONE_KEY := "routing_zone"
 
@@ -902,7 +909,11 @@ func _is_edge_valid(
 			return false
 
 	# Same-zone corridors may merge freely at the same height (T-junctions, overlaps).
+<<<<<<< Updated upstream
 	# Cross-zone corridors (pre_lock vs post_lock) are always blocked.
+=======
+	# Cross-zone corridors are always blocked.
+>>>>>>> Stashed changes
 	for record in _pending_corridor_records:
 		var corridor_aabb := record["aabb"] as AABB
 		var other_zone := str(record.get("routing_zone", "default"))
@@ -949,7 +960,14 @@ func _generate_queued_geometry() -> void:
 	
 	_generate_gateway_corner_plugs()
 
+<<<<<<< Updated upstream
 func _register_footprints(polyline: PackedVector3Array, routing_zone: String) -> void:
+=======
+func _register_footprints(
+	polyline: PackedVector3Array,
+	routing_zone: String
+) -> void:
+>>>>>>> Stashed changes
 	var w := CORRIDOR_WIDTH
 
 	# Corner/junction squares.
@@ -1089,14 +1107,24 @@ func _commit_polyline(polyline: PackedVector3Array, routing_zone: String = "") -
 	_pending_polylines.append(polyline)
 	_pending_polyline_records.append({
 		"polyline": polyline,
+<<<<<<< Updated upstream
 		"routing_zone": routing_zone
+=======
+		"routing_zone": routing_zone,
+		"owner_edge_id": _active_edge_id
+>>>>>>> Stashed changes
 	})
 
 	for aabb in _polyline_to_corridor_aabbs(polyline):
 		_pending_corridor_aabbs.append(aabb)
 		_pending_corridor_records.append({
 			"aabb": aabb,
+<<<<<<< Updated upstream
 			"routing_zone": routing_zone
+=======
+			"routing_zone": routing_zone,
+			"owner_edge_id": _active_edge_id
+>>>>>>> Stashed changes
 		})
 
 
@@ -1301,11 +1329,24 @@ func _get_edge_routing_zone(edge: LogicalEdge) -> String:
 
 
 func _corridor_zones_can_merge(zone_a: String, zone_b: String) -> bool:
+<<<<<<< Updated upstream
 	if zone_a.is_empty() or zone_b.is_empty():
 		return true
 	if zone_a == "default" or zone_b == "default":
 		return true
 	return zone_a == zone_b
+=======
+	var normalized_a := zone_a.strip_edges()
+	var normalized_b := zone_b.strip_edges()
+
+	if normalized_a.is_empty():
+		normalized_a = "default"
+
+	if normalized_b.is_empty():
+		normalized_b = "default"
+
+	return normalized_a == normalized_b
+>>>>>>> Stashed changes
 
 
 func _clean_collinear(pts: PackedVector3Array) -> PackedVector3Array:
@@ -1592,7 +1633,13 @@ func _generate_gateway_corner_plugs() -> void:
 		if room_aabb.size == Vector3.ZERO:
 			continue
 
+<<<<<<< Updated upstream
 		_generate_gateway_corner_plugs_for(gw_pos, gw_dir, room_aabb)
+=======
+		var routing_zone := str(gw_data.get("routing_zone", "default"))
+		var owner_edge_id := str(gw_data.get("owner_edge_id", ""))
+		_generate_gateway_corner_plugs_for(gw_pos, gw_dir, room_aabb, routing_zone, owner_edge_id)
+>>>>>>> Stashed changes
 
 	print("CorridorNetwork: gateway_corner_plugs=", _gateway_corner_plug_count)
 
@@ -1620,7 +1667,17 @@ func _find_gateway_room_aabb(gw_pos: Vector3) -> AABB:
 
 	return best
 
+<<<<<<< Updated upstream
 func _generate_gateway_corner_plugs_for(gw_pos: Vector3, gw_dir: Vector2, room_aabb: AABB) -> void:
+=======
+func _generate_gateway_corner_plugs_for(
+	gw_pos: Vector3,
+	gw_dir: Vector2,
+	room_aabb: AABB,
+	routing_zone: String,
+	owner_edge_id: String
+) -> void:
+>>>>>>> Stashed changes
 	var h := CORRIDOR_HEIGHT
 	var t := SLAB_T
 	var half_w := CORRIDOR_WIDTH * 0.5
@@ -1628,8 +1685,13 @@ func _generate_gateway_corner_plugs_for(gw_pos: Vector3, gw_dir: Vector2, room_a
 	var side_a := Vector2(-gw_dir.y, gw_dir.x)
 	var side_b := -side_a
 
+<<<<<<< Updated upstream
 	_try_make_gateway_side_plug(gw_pos, gw_dir, side_a, room_aabb, half_w, h, t)
 	_try_make_gateway_side_plug(gw_pos, gw_dir, side_b, room_aabb, half_w, h, t)
+=======
+	_try_make_gateway_side_plug(gw_pos, gw_dir, side_a, room_aabb, half_w, h, t, routing_zone, owner_edge_id)
+	_try_make_gateway_side_plug(gw_pos, gw_dir, side_b, room_aabb, half_w, h, t, routing_zone, owner_edge_id)
+>>>>>>> Stashed changes
 
 func _try_make_gateway_side_plug(
 	gw_pos: Vector3,
@@ -1638,7 +1700,13 @@ func _try_make_gateway_side_plug(
 	room_aabb: AABB,
 	half_w: float,
 	h: float,
+<<<<<<< Updated upstream
 	_t: float
+=======
+	_t: float,
+	_routing_zone: String,
+	owner_edge_id: String
+>>>>>>> Stashed changes
 ) -> void:
 	var side_point := Vector2(gw_pos.x, gw_pos.z) + side_dir * half_w
 
@@ -1649,9 +1717,21 @@ func _try_make_gateway_side_plug(
 	if overhang <= 0.05:
 		return
 
+<<<<<<< Updated upstream
 	var plug_span := overhang + GATEWAY_CORNER_PLUG_OVERLAP * 2.0
 	var plug_center_2d := Vector2(gw_pos.x, gw_pos.z)
 	plug_center_2d += side_dir * (half_w - overhang * 0.5)
+=======
+	var room_side_offset := half_w - overhang
+	if _owner_corridor_wraps_gateway_corner(gw_pos, gw_dir, side_dir, owner_edge_id, room_side_offset):
+		return
+
+	var inner_offset := room_side_offset - GATEWAY_CORNER_PLUG_INNER_OVERLAP
+	var outer_offset := half_w + GATEWAY_CORNER_PLUG_OVERLAP
+	var plug_span := outer_offset - inner_offset
+	var plug_center_2d := Vector2(gw_pos.x, gw_pos.z)
+	plug_center_2d += side_dir * ((inner_offset + outer_offset) * 0.5)
+>>>>>>> Stashed changes
 	plug_center_2d += gw_dir * (GATEWAY_CORNER_PLUG_DEPTH * 0.5)
 
 	var size: Vector3
@@ -1667,6 +1747,125 @@ func _try_make_gateway_side_plug(
 	_make_box(size, pos)
 	_gateway_corner_plug_count += 1
 
+<<<<<<< Updated upstream
+=======
+func _owner_corridor_wraps_gateway_corner(
+	gw_pos: Vector3,
+	gw_dir: Vector2,
+	side_dir: Vector2,
+	owner_edge_id: String,
+	room_side_offset: float
+) -> bool:
+	if owner_edge_id.is_empty():
+		return false
+
+	var gw_2d := Vector2(gw_pos.x, gw_pos.z)
+	var side_wrap_offset := maxf(
+		room_side_offset + WALL_MERGE_EPS,
+		CORRIDOR_WIDTH * 0.45
+	)
+
+	for record in _pending_polyline_records:
+		if str(record.get("owner_edge_id", "")) != owner_edge_id:
+			continue
+
+		var polyline := record["polyline"] as PackedVector3Array
+		if polyline.size() < 2:
+			continue
+
+		var start_index: int = _find_polyline_gateway_index(polyline, gw_pos)
+		if start_index == -1:
+			continue
+
+		for step_dir: int in [-1, 1]:
+			var first_index: int = start_index + step_dir
+			if first_index < 0 or first_index >= polyline.size():
+				continue
+
+			var first_delta := polyline[first_index] - polyline[start_index]
+			var first_dir: Vector2 = Vector2(first_delta.x, first_delta.z)
+			if first_dir.length() <= 0.05:
+				continue
+
+			first_dir = first_dir.normalized()
+			if first_dir.dot(gw_dir) < 0.60:
+				continue
+
+			var walked := 0.0
+			var prev_index: int = start_index
+			var curr_index: int = first_index
+
+			while curr_index >= 0 and curr_index < polyline.size():
+				var prev := polyline[prev_index]
+				var curr := polyline[curr_index]
+				var delta := curr - prev
+				var delta_2d := Vector2(delta.x, delta.z)
+				var segment_len := delta_2d.length()
+
+				if segment_len > 0.05:
+					var segment_dir: Vector2 = delta_2d / segment_len
+					var prev_2d := Vector2(prev.x, prev.z)
+					var curr_2d := Vector2(curr.x, curr.z)
+					var prev_side_offset := (prev_2d - gw_2d).dot(side_dir)
+					var curr_side_offset := (curr_2d - gw_2d).dot(side_dir)
+					var max_side_offset := maxf(prev_side_offset, curr_side_offset)
+					var segment_runs_along_room_side := absf(segment_dir.dot(gw_dir)) > 0.60
+
+					if (
+						walked > WALL_MERGE_EPS
+						and max_side_offset >= side_wrap_offset
+						and segment_runs_along_room_side
+					):
+						return true
+
+					walked += segment_len
+					if walked > GATEWAY_CORNER_WRAP_SEARCH_DISTANCE:
+						break
+
+				prev_index = curr_index
+				curr_index += step_dir
+
+	return false
+
+func _find_polyline_gateway_index(polyline: PackedVector3Array, gw_pos: Vector3) -> int:
+	var gw_2d := Vector2(gw_pos.x, gw_pos.z)
+
+	var endpoint_indices: Array[int] = [0, polyline.size() - 1]
+	var best_endpoint_index := -1
+	var best_endpoint_distance := INF
+
+	for endpoint_index: int in endpoint_indices:
+		var endpoint := polyline[endpoint_index]
+		if absf(endpoint.y - gw_pos.y) > Y_EPS:
+			continue
+
+		var endpoint_distance := Vector2(endpoint.x, endpoint.z).distance_to(gw_2d)
+		if endpoint_distance < best_endpoint_distance:
+			best_endpoint_distance = endpoint_distance
+			best_endpoint_index = endpoint_index
+
+	if best_endpoint_distance <= GATEWAY_CORNER_WRAP_MATCH_TOL:
+		return best_endpoint_index
+
+	var best_index := -1
+	var best_distance := INF
+
+	for i in range(polyline.size()):
+		var point := polyline[i]
+		if absf(point.y - gw_pos.y) > Y_EPS:
+			continue
+
+		var distance := Vector2(point.x, point.z).distance_to(gw_2d)
+		if distance < best_distance:
+			best_distance = distance
+			best_index = i
+
+	if best_distance <= GATEWAY_CORNER_WRAP_MATCH_TOL:
+		return best_index
+
+	return -1
+
+>>>>>>> Stashed changes
 func _gateway_side_overhang(side_point: Vector2, side_dir: Vector2, room_aabb: AABB) -> float:
 	if absf(side_dir.x) > 0.5:
 		if side_dir.x > 0.0:
