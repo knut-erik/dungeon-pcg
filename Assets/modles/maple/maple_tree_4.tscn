@@ -1,8 +1,10 @@
-[gd_scene load_steps=8 format=4 uid="uid://ddo6b54praiju"]
+[gd_scene load_steps=11 format=4 uid="uid://ddo6b54praiju"]
 
 [ext_resource type="Texture2D" uid="uid://c3phshkvv2id7" path="res://Assets/modles/maple/Maple Trees_MapleTree_Bark.png" id="1_q35ob"]
 [ext_resource type="Texture2D" uid="uid://bbjtnmjh017bj" path="res://Assets/modles/maple/Maple Trees_MapleTree_Bark_Normal.png" id="2_mrxry"]
 [ext_resource type="Texture2D" uid="uid://bd4cjqaf3pavo" path="res://Assets/modles/maple/Maple Trees_MapleTree_Leaves.png" id="3_hgnil"]
+[ext_resource type="Texture2D" uid="uid://bbqvcte0y3jg5" path="res://Assets/modles/maple/Maple Trees_MapleTree_Leaves_edit.png" id="4_hgnil"]
+[ext_resource type="Material" uid="uid://cwsl7xvmyeb81" path="res://Assets/modles/maple/Maple_leaves.tres" id="5_y4ieu"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2c0u1"]
 resource_name = "MapleTree_Bark"
@@ -87,7 +89,15 @@ _surfaces = [{
 blend_shape_mode = 0
 shadow_mesh = SubResource("ArrayMesh_lblwe")
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_68uk3"]
+next_pass = ExtResource("5_y4ieu")
+transparency = 2
+alpha_scissor_threshold = 0.5
+alpha_antialiasing_mode = 0
+albedo_texture = ExtResource("4_hgnil")
+
 [node name="MapleTree_4" type="MeshInstance3D"]
 transform = Transform3D(100, 0, 0, 0, -1.1920931e-05, 100, 0, -100, -1.1920931e-05, 0, 0, 0)
 mesh = SubResource("ArrayMesh_apkxl")
 skeleton = NodePath("")
+surface_material_override/1 = SubResource("StandardMaterial3D_68uk3")

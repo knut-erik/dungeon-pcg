@@ -1,0 +1,16 @@
+[gd_scene load_steps=4 format=3 uid="uid://dsg2qv7lmb7o6"]
+
+[ext_resource type="Script" uid="uid://cq5txe1m020wq" path="res://Assets/modles/Torch/csg_mesh_3d.gd" id="1_qel4g"]
+[ext_resource type="PackedScene" uid="uid://vrfac78dk0p7" path="res://Assets/modles/Torch/torch_mounted.tscn" id="2_4e6oy"]
+[ext_resource type="PackedScene" uid="uid://b2rjiybwquopv" path="res://Assets/modles/Torch/torch_lit.tscn" id="3_htmji"]
+
+[node name="Node3D" type="Node3D"]
+
+[node name="CSGMesh3D" type="CSGMesh3D" parent="."]
+script = ExtResource("1_qel4g")
+
+[node name="torch_mounted" parent="CSGMesh3D" instance=ExtResource("2_4e6oy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.009151399, -0.00021725893, 0.005440831)
+
+[node name="torch_lit" parent="CSGMesh3D" instance=ExtResource("3_htmji")]
+transform = Transform3D(1, 0, 0, 0, 0.976296, -0.21643962, 0, 0.21643962, 0.976296, 0.005689323, -0.0025475323, 0.21654432)
