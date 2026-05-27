@@ -2,7 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://dnd78f1x22e6a" path="res://Assets/modles/dead_trees/Dead Trees_NormalTree_Bark.png" id="1_igo11"]
 [ext_resource type="Texture2D" uid="uid://f2cyoc03txjw" path="res://Assets/modles/dead_trees/Dead Trees_NormalTree_Bark_Normal.png" id="2_uylob"]
-[ext_resource type="Material" uid="uid://bnp3m6jllga6k" path="res://Assets/texture/dead_tree_bark/Dead_tree_bark.tres" id="3_uylob"]
+[ext_resource type="Material" uid="uid://bnp3m6jllga6k" path="res://Assets/Textures/Trees/dead_tree_bark/Dead_tree_bark.tres" id="3_uylob"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_y8kvh"]
 resource_name = "NormalTree_Bark"

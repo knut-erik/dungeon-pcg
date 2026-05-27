@@ -1,0 +1,18 @@
+[gd_resource type="StandardMaterial3D" load_steps=6 format=3 uid="uid://cw3o0iwnnjwle"]
+
+[ext_resource type="Texture2D" uid="uid://62cg53r0uuxg" path="res://Assets/Textures/Walls/Brick_moss_middle/PavingStones085_240p_Color.png" id="1_ehkx1"]
+[ext_resource type="Texture2D" uid="uid://bbxlg1abywrl7" path="res://Assets/Textures/Walls/Brick_moss_middle/PavingStones085_240p_AmbientOcclusion.png" id="2_t4qv3"]
+[ext_resource type="Texture2D" uid="uid://dy5dtj1iqtcdg" path="res://Assets/Textures/Walls/Brick_moss_middle/PavingStones085_240p_Displacement.png" id="3_p2ckl"]
+[ext_resource type="Texture2D" uid="uid://bv4yjud45kr5e" path="res://Assets/Textures/Walls/Brick_moss_middle/PavingStones085_240p_NormalGL.png" id="4_7j6go"]
+[ext_resource type="Texture2D" uid="uid://bl4psn0dbio15" path="res://Assets/Textures/Walls/Brick_moss_middle/PavingStones085_240p_Roughness.png" id="5_hjxee"]
+
+[resource]
+albedo_texture = ExtResource("1_ehkx1")
+roughness_texture = ExtResource("5_hjxee")
+normal_enabled = true
+normal_texture = ExtResource("4_7j6go")
+ao_enabled = true
+ao_texture = ExtResource("2_t4qv3")
+heightmap_enabled = true
+heightmap_texture = ExtResource("3_p2ckl")
+uv2_triplanar = true

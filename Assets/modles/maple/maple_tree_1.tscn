@@ -3,7 +3,7 @@
 [ext_resource type="Texture2D" uid="uid://c3phshkvv2id7" path="res://Assets/modles/maple/Maple Trees_MapleTree_Bark.png" id="1_mh85r"]
 [ext_resource type="Texture2D" uid="uid://bbjtnmjh017bj" path="res://Assets/modles/maple/Maple Trees_MapleTree_Bark_Normal.png" id="2_6l6nk"]
 [ext_resource type="Texture2D" uid="uid://bd4cjqaf3pavo" path="res://Assets/modles/maple/Maple Trees_MapleTree_Leaves.png" id="3_ll8b4"]
-[ext_resource type="Material" uid="uid://brqv1fkgnqvhb" path="res://Assets/texture/Maple_bark/Maple_bark.tres" id="4_558cc"]
+[ext_resource type="Material" uid="uid://brqv1fkgnqvhb" path="res://Assets/Textures/Trees/Maple_bark/Maple_bark.tres" id="4_558cc"]
 [ext_resource type="Texture2D" uid="uid://bbqvcte0y3jg5" path="res://Assets/modles/maple/Maple Trees_MapleTree_Leaves_edit.png" id="5_j06r4"]
 [ext_resource type="Material" uid="uid://cwsl7xvmyeb81" path="res://Assets/modles/maple/Maple_leaves.tres" id="6_lpy35"]
 

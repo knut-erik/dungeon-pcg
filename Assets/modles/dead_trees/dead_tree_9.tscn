@@ -2,7 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://cd15mdrn765pt" path="res://Assets/modles/dead_trees/Dead Trees-F5I0Q7TwO5_MapleTree_Bark.png" id="1_bm33s"]
 [ext_resource type="Texture2D" uid="uid://6sgahdbkxkln" path="res://Assets/modles/dead_trees/Dead Trees-F5I0Q7TwO5_MapleTree_Bark_Normal.png" id="2_1gnwt"]
-[ext_resource type="Material" uid="uid://bnp3m6jllga6k" path="res://Assets/texture/dead_tree_bark/Dead_tree_bark.tres" id="3_1gnwt"]
+[ext_resource type="Material" uid="uid://bnp3m6jllga6k" path="res://Assets/Textures/Trees/dead_tree_bark/Dead_tree_bark.tres" id="3_1gnwt"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6cym5"]
 resource_name = "MapleTree_Bark"

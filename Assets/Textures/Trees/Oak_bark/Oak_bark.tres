@@ -1,0 +1,17 @@
+[gd_resource type="StandardMaterial3D" load_steps=6 format=3 uid="uid://dajbrt7c6kmbl"]
+
+[ext_resource type="Texture2D" uid="uid://byha3w4su6sbx" path="res://Assets/Textures/Trees/Oak_bark/bark_brown_02_diff_240p.png" id="1_4eo1d"]
+[ext_resource type="Texture2D" uid="uid://cq3y44nq24ao8" path="res://Assets/Textures/Trees/Oak_bark/bark_brown_02_ao_240p.png" id="2_umsp0"]
+[ext_resource type="Texture2D" uid="uid://gwjulpi6sriu" path="res://Assets/Textures/Trees/Oak_bark/bark_brown_02_disp_240p.png" id="3_xf35b"]
+[ext_resource type="Texture2D" uid="uid://8ddevjsd7ob4" path="res://Assets/Textures/Trees/Oak_bark/bark_brown_02_nor_gl_240p.png" id="4_d6mc1"]
+[ext_resource type="Texture2D" uid="uid://dyoui1riv0t3m" path="res://Assets/Textures/Trees/Oak_bark/bark_brown_02_rough_240p.png" id="5_3vqek"]
+
+[resource]
+albedo_texture = ExtResource("1_4eo1d")
+roughness_texture = ExtResource("5_3vqek")
+normal_enabled = true
+normal_texture = ExtResource("4_d6mc1")
+ao_enabled = true
+ao_texture = ExtResource("2_umsp0")
+heightmap_enabled = true
+heightmap_texture = ExtResource("3_xf35b")

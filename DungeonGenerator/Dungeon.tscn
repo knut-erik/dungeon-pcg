@@ -20,7 +20,7 @@ background_mode = 1
 background_color = Color(0.34454793, 0.47959596, 0.55798304, 1)
 sky = SubResource("Sky_slqep")
 
-[node name="Node3D" type="Node3D"]
+[node name="Node3D2" type="Node3D"]
 script = ExtResource("1_nulmw")
 room_library = Array[ExtResource("2_6h3ij")]([ExtResource("3_6ufjc"), ExtResource("5_dqayi"), ExtResource("3_4p0qp"), ExtResource("7_1vdva"), ExtResource("4_8mbj2"), ExtResource("8_8mbj2"), ExtResource("9_gefqj"), ExtResource("10_pt085")])
 

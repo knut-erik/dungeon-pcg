@@ -3,7 +3,7 @@
 [ext_resource type="Texture2D" uid="uid://dsttlnukd5dff" path="res://Assets/modles/pine/Pine Trees_PineTree_Bark.png" id="1_0rnlt"]
 [ext_resource type="Texture2D" uid="uid://vwwc3oaefh0x" path="res://Assets/modles/pine/Pine Trees_PineTree_Bark_Normal.png" id="2_8diq8"]
 [ext_resource type="Texture2D" uid="uid://dss2qjoomsd5k" path="res://Assets/modles/pine/Pine Trees_PineTree_Leaves.png" id="3_7omkw"]
-[ext_resource type="Material" uid="uid://cihmsdyaphfoo" path="res://Assets/texture/Pine_bark/Pine_bark.tres" id="4_7omkw"]
+[ext_resource type="Material" uid="uid://cihmsdyaphfoo" path="res://Assets/Textures/Trees/Pine_bark/Pine_bark.tres" id="4_7omkw"]
 [ext_resource type="Texture2D" uid="uid://c1qcudkiv82rc" path="res://Assets/modles/pine/Pine Trees_PineTree_Leaves_edit.png" id="5_vjqly"]
 [ext_resource type="Material" uid="uid://dlojvw7bf4d5o" path="res://Assets/modles/pine/Pine Tree_PineTree_leaves.tres" id="6_vjqly"]
 

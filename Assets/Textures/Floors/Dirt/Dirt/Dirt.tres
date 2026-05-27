@@ -1,0 +1,18 @@
+[gd_resource type="StandardMaterial3D" load_steps=6 format=3 uid="uid://ci7r2q5qftu7f"]
+
+[ext_resource type="Texture2D" uid="uid://c4vqvb20kjby8" path="res://Assets/Textures/Floors/Dirt/Dirt/rock_05_diff_240p.png" id="1_ijmwn"]
+[ext_resource type="Texture2D" uid="uid://dgna6y0syxp1b" path="res://Assets/Textures/Floors/Dirt/Dirt/rock_05_ao_240p.png" id="2_x4peg"]
+[ext_resource type="Texture2D" uid="uid://btp1f3ty0ara8" path="res://Assets/Textures/Floors/Dirt/Dirt/rock_05_disp_240p.png" id="3_dl3p4"]
+[ext_resource type="Texture2D" uid="uid://o7acunrk7aw4" path="res://Assets/Textures/Floors/Dirt/Dirt/rock_05_nor_gl_240p.png" id="4_q48dj"]
+[ext_resource type="Texture2D" uid="uid://cx5uyi0blykmt" path="res://Assets/Textures/Floors/Dirt/Dirt/rock_05_rough_240p.png" id="5_anbu4"]
+
+[resource]
+albedo_texture = ExtResource("1_ijmwn")
+roughness_texture = ExtResource("5_anbu4")
+normal_enabled = true
+normal_texture = ExtResource("4_q48dj")
+ao_enabled = true
+ao_texture = ExtResource("2_x4peg")
+heightmap_enabled = true
+heightmap_texture = ExtResource("3_dl3p4")
+uv2_triplanar = true

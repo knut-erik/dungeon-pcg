@@ -3,7 +3,7 @@
 [ext_resource type="Texture2D" uid="uid://cy5pk5td8fmb1" path="res://Assets/modles/Oak_trees/Trees_NormalTree_Bark.png" id="1_ye082"]
 [ext_resource type="Texture2D" uid="uid://c788qbday68xi" path="res://Assets/modles/Oak_trees/Trees_NormalTree_Bark_Normal.png" id="2_4kqj8"]
 [ext_resource type="Texture2D" uid="uid://dwj4la0xkfyav" path="res://Assets/modles/Oak_trees/Trees_NormalTree_Leaves.png" id="3_hn68e"]
-[ext_resource type="Material" uid="uid://dajbrt7c6kmbl" path="res://Assets/texture/Oak_bark/Oak_bark.tres" id="4_u4rxr"]
+[ext_resource type="Material" uid="uid://dajbrt7c6kmbl" path="res://Assets/Textures/Trees/Oak_bark/Oak_bark.tres" id="4_u4rxr"]
 [ext_resource type="Texture2D" uid="uid://bdw6viear4qea" path="res://Assets/modles/Oak_trees/Trees_NormalTree_Leaves_edit.png" id="5_ojohx"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_b6nxf"]

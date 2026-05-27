@@ -1,0 +1,21 @@
+[gd_resource type="StandardMaterial3D" load_steps=7 format=3 uid="uid://bv3t5eqkua1s4"]
+
+[ext_resource type="Texture2D" uid="uid://b8il3p04klf47" path="res://Assets/Textures/Floors/Planks/Plank1/Planks012_240p_Color.png" id="1_6yt8w"]
+[ext_resource type="Texture2D" uid="uid://b5l0go5v3a3ep" path="res://Assets/Textures/Floors/Planks/Plank1/Planks012_240p_AmbientOcclusion.png" id="2_pl7c7"]
+[ext_resource type="Texture2D" uid="uid://bywmojxhcdc5v" path="res://Assets/Textures/Floors/Planks/Plank1/Planks012_240p_Displacement.png" id="3_gqiw8"]
+[ext_resource type="Texture2D" uid="uid://b6ohkx35mq47g" path="res://Assets/Textures/Floors/Planks/Plank1/Planks012_240p_Metalness.png" id="4_uevk4"]
+[ext_resource type="Texture2D" uid="uid://bxwlpywpa2pbw" path="res://Assets/Textures/Floors/Planks/Plank1/Planks012_240p_NormalGL.png" id="5_x7pag"]
+[ext_resource type="Texture2D" uid="uid://dphyx012tm7mj" path="res://Assets/Textures/Floors/Planks/Plank1/Planks012_240p_Roughness.png" id="6_yiodn"]
+
+[resource]
+albedo_texture = ExtResource("1_6yt8w")
+metallic = 1.0
+metallic_texture = ExtResource("4_uevk4")
+roughness_texture = ExtResource("6_yiodn")
+normal_enabled = true
+normal_texture = ExtResource("5_x7pag")
+ao_enabled = true
+ao_texture = ExtResource("2_pl7c7")
+heightmap_enabled = true
+heightmap_texture = ExtResource("3_gqiw8")
+uv2_triplanar = true
