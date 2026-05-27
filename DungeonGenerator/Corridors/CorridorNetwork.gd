@@ -17,14 +17,10 @@ const GATEWAY_RESERVED_THROAT_STEPS := 6
 const GATEWAY_RESERVED_THROAT_HALF_WIDTH := CORRIDOR_WIDTH * 0.5 + 0.10
 const GATEWAY_CORNER_PLUG_OVERLAP := 0.30
 const GATEWAY_CORNER_PLUG_DEPTH := SLAB_T * 2.0
-<<<<<<< Updated upstream
-const STAIR_CLEARANCE_MARGIN := CORRIDOR_WIDTH * 0.5 + ROOM_WALL_CUT_MARGIN + WALL_MERGE_EPS
-=======
 const GATEWAY_CORNER_PLUG_INNER_OVERLAP := 0.30
 const STAIR_CLEARANCE_MARGIN := CORRIDOR_WIDTH * 0.5 + ROOM_WALL_CUT_MARGIN + WALL_MERGE_EPS
 const GATEWAY_CORNER_WRAP_MATCH_TOL := CORRIDOR_WIDTH * 0.75
 const GATEWAY_CORNER_WRAP_SEARCH_DISTANCE := CORRIDOR_WIDTH * 1.5
->>>>>>> Stashed changes
 
 const ROUTING_ZONE_KEY := "routing_zone"
 
@@ -907,11 +903,7 @@ func _is_edge_valid(
 			return false
 
 	# Same-zone corridors may merge freely at the same height (T-junctions, overlaps).
-<<<<<<< Updated upstream
 	# Cross-zone corridors (pre_lock vs post_lock) are always blocked.
-=======
-	# Cross-zone corridors are always blocked.
->>>>>>> Stashed changes
 	for record in _pending_corridor_records:
 		var corridor_aabb := record["aabb"] as AABB
 		var other_zone := str(record.get("routing_zone", "default"))
@@ -958,14 +950,7 @@ func _generate_queued_geometry() -> void:
 	
 	_generate_gateway_corner_plugs()
 
-<<<<<<< Updated upstream
 func _register_footprints(polyline: PackedVector3Array, routing_zone: String) -> void:
-=======
-func _register_footprints(
-	polyline: PackedVector3Array,
-	routing_zone: String
-) -> void:
->>>>>>> Stashed changes
 	var w := CORRIDOR_WIDTH
 
 	# Corner/junction squares.
@@ -1105,24 +1090,17 @@ func _commit_polyline(polyline: PackedVector3Array, routing_zone: String = "") -
 	_pending_polylines.append(polyline)
 	_pending_polyline_records.append({
 		"polyline": polyline,
-<<<<<<< Updated upstream
-		"routing_zone": routing_zone
-=======
 		"routing_zone": routing_zone,
 		"owner_edge_id": _active_edge_id
->>>>>>> Stashed changes
 	})
 
 	for aabb in _polyline_to_corridor_aabbs(polyline):
 		_pending_corridor_aabbs.append(aabb)
 		_pending_corridor_records.append({
 			"aabb": aabb,
-<<<<<<< Updated upstream
 			"routing_zone": routing_zone
-=======
 			"routing_zone": routing_zone,
 			"owner_edge_id": _active_edge_id
->>>>>>> Stashed changes
 		})
 
 
@@ -1327,13 +1305,6 @@ func _get_edge_routing_zone(edge: LogicalEdge) -> String:
 
 
 func _corridor_zones_can_merge(zone_a: String, zone_b: String) -> bool:
-<<<<<<< Updated upstream
-	if zone_a.is_empty() or zone_b.is_empty():
-		return true
-	if zone_a == "default" or zone_b == "default":
-		return true
-	return zone_a == zone_b
-=======
 	var normalized_a := zone_a.strip_edges()
 	var normalized_b := zone_b.strip_edges()
 
@@ -1344,7 +1315,7 @@ func _corridor_zones_can_merge(zone_a: String, zone_b: String) -> bool:
 		normalized_b = "default"
 
 	return normalized_a == normalized_b
->>>>>>> Stashed changes
+
 
 
 func _clean_collinear(pts: PackedVector3Array) -> PackedVector3Array:
@@ -1631,13 +1602,9 @@ func _generate_gateway_corner_plugs() -> void:
 		if room_aabb.size == Vector3.ZERO:
 			continue
 
-<<<<<<< Updated upstream
-		_generate_gateway_corner_plugs_for(gw_pos, gw_dir, room_aabb)
-=======
 		var routing_zone := str(gw_data.get("routing_zone", "default"))
 		var owner_edge_id := str(gw_data.get("owner_edge_id", ""))
 		_generate_gateway_corner_plugs_for(gw_pos, gw_dir, room_aabb, routing_zone, owner_edge_id)
->>>>>>> Stashed changes
 
 	print("CorridorNetwork: gateway_corner_plugs=", _gateway_corner_plug_count)
 
@@ -1665,9 +1632,6 @@ func _find_gateway_room_aabb(gw_pos: Vector3) -> AABB:
 
 	return best
 
-<<<<<<< Updated upstream
-func _generate_gateway_corner_plugs_for(gw_pos: Vector3, gw_dir: Vector2, room_aabb: AABB) -> void:
-=======
 func _generate_gateway_corner_plugs_for(
 	gw_pos: Vector3,
 	gw_dir: Vector2,
@@ -1675,7 +1639,6 @@ func _generate_gateway_corner_plugs_for(
 	routing_zone: String,
 	owner_edge_id: String
 ) -> void:
->>>>>>> Stashed changes
 	var h := CORRIDOR_HEIGHT
 	var t := SLAB_T
 	var half_w := CORRIDOR_WIDTH * 0.5
@@ -1683,13 +1646,8 @@ func _generate_gateway_corner_plugs_for(
 	var side_a := Vector2(-gw_dir.y, gw_dir.x)
 	var side_b := -side_a
 
-<<<<<<< Updated upstream
-	_try_make_gateway_side_plug(gw_pos, gw_dir, side_a, room_aabb, half_w, h, t)
-	_try_make_gateway_side_plug(gw_pos, gw_dir, side_b, room_aabb, half_w, h, t)
-=======
 	_try_make_gateway_side_plug(gw_pos, gw_dir, side_a, room_aabb, half_w, h, t, routing_zone, owner_edge_id)
 	_try_make_gateway_side_plug(gw_pos, gw_dir, side_b, room_aabb, half_w, h, t, routing_zone, owner_edge_id)
->>>>>>> Stashed changes
 
 func _try_make_gateway_side_plug(
 	gw_pos: Vector3,
@@ -1698,13 +1656,9 @@ func _try_make_gateway_side_plug(
 	room_aabb: AABB,
 	half_w: float,
 	h: float,
-<<<<<<< Updated upstream
-	_t: float
-=======
 	_t: float,
 	_routing_zone: String,
 	owner_edge_id: String
->>>>>>> Stashed changes
 ) -> void:
 	var side_point := Vector2(gw_pos.x, gw_pos.z) + side_dir * half_w
 
@@ -1715,11 +1669,6 @@ func _try_make_gateway_side_plug(
 	if overhang <= 0.05:
 		return
 
-<<<<<<< Updated upstream
-	var plug_span := overhang + GATEWAY_CORNER_PLUG_OVERLAP * 2.0
-	var plug_center_2d := Vector2(gw_pos.x, gw_pos.z)
-	plug_center_2d += side_dir * (half_w - overhang * 0.5)
-=======
 	var room_side_offset := half_w - overhang
 	if _owner_corridor_wraps_gateway_corner(gw_pos, gw_dir, side_dir, owner_edge_id, room_side_offset):
 		return
@@ -1729,7 +1678,6 @@ func _try_make_gateway_side_plug(
 	var plug_span := outer_offset - inner_offset
 	var plug_center_2d := Vector2(gw_pos.x, gw_pos.z)
 	plug_center_2d += side_dir * ((inner_offset + outer_offset) * 0.5)
->>>>>>> Stashed changes
 	plug_center_2d += gw_dir * (GATEWAY_CORNER_PLUG_DEPTH * 0.5)
 
 	var size: Vector3
@@ -1745,8 +1693,6 @@ func _try_make_gateway_side_plug(
 	_make_box(size, pos)
 	_gateway_corner_plug_count += 1
 
-<<<<<<< Updated upstream
-=======
 func _owner_corridor_wraps_gateway_corner(
 	gw_pos: Vector3,
 	gw_dir: Vector2,
@@ -1863,7 +1809,6 @@ func _find_polyline_gateway_index(polyline: PackedVector3Array, gw_pos: Vector3)
 
 	return -1
 
->>>>>>> Stashed changes
 func _gateway_side_overhang(side_point: Vector2, side_dir: Vector2, room_aabb: AABB) -> float:
 	if absf(side_dir.x) > 0.5:
 		if side_dir.x > 0.0:
