@@ -18,10 +18,7 @@ const COMPONENT_DESCRIPTORS_KEY := "dungeon_components"
 
 const COMPONENT_SCENE_REGISTRY := {
 	"key_pickup": preload("res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/Scenes/KeyPickup.tscn"),
-<<<<<<< Updated upstream
-=======
 	"coin": preload("res://DungeonGenerator/Rooms/RoomObjects/Coin/Coin.tscn"),
->>>>>>> Stashed changes
 	"lever": preload("res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/Scenes/Lever.tscn"),
 	"lock_trigger_area": preload("res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/Scenes/LockTriggerArea.tscn"),
 	"hinge_door": preload("res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/Scenes/HingeDoor.tscn"),
@@ -562,8 +559,6 @@ func _validate_logical_graph(graph: LogicalGraph) -> bool:
 		if edge.edge_type == "locked" and not edge.requirements.has("key_id"):
 			push_warning("DungeonGenerator: Locked edge '%s' has no key_id yet." % edge.id)
 
-<<<<<<< Updated upstream
-=======
 	if not _validate_lock_blocks_boss(graph):
 		ok = false
 
@@ -652,7 +647,6 @@ func _validate_loop_return_blockers(graph: LogicalGraph) -> bool:
 			)
 			ok = false
 
->>>>>>> Stashed changes
 	return ok
 
 func _spawn_graph_components(graph: LogicalGraph) -> void:
@@ -779,8 +773,6 @@ func _spawn_component_from_descriptor(
 	component.transform = Transform3D.IDENTITY
 	socket.add_child(component)
 
-<<<<<<< Updated upstream
-=======
 	if component_type == "false_door":
 		_align_component_to_claimed_gateway(
 			component,
@@ -789,7 +781,6 @@ func _spawn_component_from_descriptor(
 			gateway_role
 		)
 
->>>>>>> Stashed changes
 	if verbose_generation_logs:
 		print(
 			"DungeonGenerator: spawned component_id=", component_id,
@@ -819,8 +810,6 @@ func _get_component_scene(scene_key: String) -> PackedScene:
 	return COMPONENT_SCENE_REGISTRY.get(scene_key, null)
 
 
-<<<<<<< Updated upstream
-=======
 func _align_component_to_claimed_gateway(
 	component: Node3D,
 	room_instance: Node3D,
@@ -868,7 +857,6 @@ func _find_claimed_gateway_for_edge(
 	return fallback
 
 
->>>>>>> Stashed changes
 func _find_component_socket(
 	root: Node,
 	socket_role: String,
