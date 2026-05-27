@@ -12,21 +12,11 @@ const SDF_OPERATION_SUBTRACTION := 1
 @export var collision_shape_path: NodePath = ^"CollisionShape3D"
 @export var auto_apply_on_ready := true
 @export var apply_once := true
-<<<<<<< Updated upstream
-@export var carve_mode: CarveMode = CarveMode.SPHERE_CHAIN
-=======
 @export var carve_mode: CarveMode = CarveMode.BOX_AABB
->>>>>>> Stashed changes
 @export var fallback_size := Vector3(10.0, 10.0, 30.0)
 @export var fallback_local_center := Vector3.ZERO
 @export var sphere_step := 3.0
 @export var radius_padding := 0.75
-<<<<<<< Updated upstream
-@export var bounds_padding := 2.0
-@export var debug_print := true
-
-var _applied := false
-=======
 @export var bounds_padding := 1.0
 @export var wait_for_terrain_settle := true
 @export var settle_stable_frames := 60
@@ -39,7 +29,6 @@ var _applied := false
 
 var _applied := false
 var _queued_modify_count := 0
->>>>>>> Stashed changes
 
 
 func _ready() -> void:
@@ -49,11 +38,8 @@ func _ready() -> void:
 
 func _apply_after_ready() -> void:
 	await get_tree().process_frame
-<<<<<<< Updated upstream
-=======
 	if wait_for_terrain_settle:
 		await _wait_for_terrain_to_settle()
->>>>>>> Stashed changes
 	apply()
 
 
@@ -72,10 +58,7 @@ func apply() -> void:
 
 	var carve_transform: Transform3D = global_transform * Transform3D(Basis.IDENTITY, fallback_local_center)
 	var carve_size: Vector3 = fallback_size
-<<<<<<< Updated upstream
-=======
 	_queued_modify_count = 0
->>>>>>> Stashed changes
 
 	var shape_node: CollisionShape3D = get_node_or_null(collision_shape_path) as CollisionShape3D
 	if shape_node != null and shape_node.shape is BoxShape3D:
@@ -83,8 +66,6 @@ func apply() -> void:
 		carve_transform = shape_node.global_transform
 		carve_size = box_shape.size
 
-<<<<<<< Updated upstream
-=======
 	_apply_carve(terrain, carve_transform, carve_size)
 
 	_applied = true
@@ -166,17 +147,10 @@ func _wait_frames(frame_count: int) -> void:
 
 
 func _apply_carve(terrain: Node3D, carve_transform: Transform3D, carve_size: Vector3) -> void:
->>>>>>> Stashed changes
 	if carve_mode == CarveMode.BOX_AABB:
 		_apply_box_aabb_carve(terrain, carve_transform, carve_size)
 	else:
 		_apply_sphere_chain_carve(terrain, carve_transform, carve_size)
-
-<<<<<<< Updated upstream
-	_applied = true
-
-=======
->>>>>>> Stashed changes
 
 func _find_terrain() -> Node3D:
 	var terrain: Node3D = get_node_or_null(terrain_path) as Node3D
@@ -218,10 +192,7 @@ func _apply_sphere_chain_carve(terrain: Node3D, carve_transform: Transform3D, ca
 	var length: float = long_axis.length() * 2.0
 	var samples: int = maxi(1, ceili(length / maxf(0.1, sphere_step)))
 	var bounds_radius: float = radius + bounds_padding
-<<<<<<< Updated upstream
-=======
 	_queued_modify_count = samples + 1
->>>>>>> Stashed changes
 
 	for sample_index in range(samples + 1):
 		var t: float = float(sample_index) / float(samples)
@@ -255,10 +226,7 @@ func _apply_box_aabb_carve(terrain: Node3D, carve_transform: Transform3D, carve_
 
 	var box: Resource = JarBoxSdf.new()
 	box.set("extent", extent)
-<<<<<<< Updated upstream
-=======
 	_queued_modify_count = 1
->>>>>>> Stashed changes
 	terrain.call("modify", box, SDF_OPERATION_SUBTRACTION, center, radius)
 
 	if debug_print:
