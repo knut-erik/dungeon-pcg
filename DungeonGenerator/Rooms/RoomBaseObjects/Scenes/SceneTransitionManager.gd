@@ -32,9 +32,12 @@ func _deferred_transition_to(target_scene: String) -> void:
 
 	if _pending_player == null or not is_instance_valid(_pending_player):
 		push_warning("SceneTransitionManager: Player was freed before transition.")
+		_transitioning = false
 		return
 
 	print("Changing scene to: ", target_scene)
+
+	var source_scene_root := _find_scene_root_containing(_pending_player)
 
 	# Preserve the Agent before destroying the current scene.
 	_pending_player.reparent(tree.root, true)
@@ -45,7 +48,13 @@ func _deferred_transition_to(target_scene: String) -> void:
 	var err := tree.change_scene_to_file(target_scene)
 	if err != OK:
 		push_error("SceneTransitionManager: Failed to load scene: " + target_scene)
+		_transitioning = false
 		return
+
+	# change_scene_to_file only frees get_tree().current_scene. If PCG_World was
+	# added manually by the menu, it is not current_scene and must be freed here.
+	if source_scene_root != null and source_scene_root != tree.current_scene and is_instance_valid(source_scene_root):
+		source_scene_root.queue_free()
 
 	_pending_temp_spawn = true
 	_delay_before_spawn = 3.0 # TEMP wait for terrain generation
@@ -109,3 +118,21 @@ func _get_destination_socket(current_scene: Node) -> SceneTransitionSocket:
 			return socket as SceneTransitionSocket
 
 	return null
+
+
+func _find_scene_root_containing(node: Node) -> Node:
+	var tree := get_tree()
+	if tree == null or node == null:
+		return null
+
+	var current := node
+	var scene_root := current
+
+	while current.get_parent() != null and current.get_parent() != tree.root:
+		current = current.get_parent()
+		scene_root = current
+
+	if scene_root == self:
+		return null
+
+	return scene_root

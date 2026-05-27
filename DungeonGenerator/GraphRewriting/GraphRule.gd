@@ -3,9 +3,13 @@ extends RefCounted
 class_name GraphRule
 
 var room_library: Array[RoomBlueprint]
+var rng: RandomNumberGenerator
+var verbose_logs := false
 
-func _init(lib: Array[RoomBlueprint]):
+func _init(lib: Array[RoomBlueprint], random: RandomNumberGenerator = null, verbose: bool = false):
 	room_library = lib
+	rng = random
+	verbose_logs = verbose
 
 # Ska överskridas av specifika regler
 func can_apply(_graph: LogicalGraph, _target_node: LogicalNode) -> bool:
@@ -20,7 +24,15 @@ func get_blueprint(tag: String) -> RoomBlueprint:
 	for bp in room_library:
 		if bp.possible_tags.has(tag):
 			valid.append(bp)
-	return valid.pick_random() if valid.size() > 0 else null
+	if valid.is_empty():
+		return null
+	if rng == null:
+		return valid[0]
+	return valid[rng.randi_range(0, valid.size() - 1)]
+
+func log_verbose(message: String) -> void:
+	if verbose_logs:
+		print(message)
 
 #---------------------------------------------------------------------------------------------------
 

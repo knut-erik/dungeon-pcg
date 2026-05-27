@@ -7,17 +7,28 @@ const ROUTING_ZONE_KEY := "routing_zone"
 var room_library: Array[RoomBlueprint]
 var num_challenges: int = 3
 var create_loop: bool = true
+var rng: RandomNumberGenerator
+var verbose_logs := false
 
-func _init(lib: Array[RoomBlueprint], challenge_count: int = 3, should_create_loop: bool = true):
+func _init(
+		lib: Array[RoomBlueprint],
+		challenge_count: int = 3,
+		should_create_loop: bool = true,
+		random: RandomNumberGenerator = null,
+		verbose: bool = false
+	):
 	room_library = lib
 	num_challenges = challenge_count
 	create_loop = should_create_loop
+	rng = random
+	verbose_logs = verbose
 
 
 func generate() -> LogicalGraph:
 	var graph := LogicalGraph.new()
 	
-	_debug_print_room_library()
+	if verbose_logs:
+		_debug_print_room_library()
 	
 	var start_node := _create_basic_node("Entrance", "start_01")
 	var boss_node := _create_basic_node("Boss", "boss_01")
@@ -27,15 +38,15 @@ func generate() -> LogicalGraph:
 
 	graph._connect(start_node, boss_node, "main_path", ["main"])
 
-	var challenge_rule := Rule_InsertChallenge.new(room_library)
+	var challenge_rule := Rule_InsertChallenge.new(room_library, rng, verbose_logs)
 	var applied := 0
 	var attempts := 0
-	var max_attempts : int = max(20, num_challenges * 20)
+	var max_attempts: int = max(20, num_challenges * 20)
 
 	while applied < num_challenges and attempts < max_attempts:
 		attempts += 1
 
-		var random_node: LogicalNode = graph.nodes.pick_random()
+		var random_node: LogicalNode = _pick_from_array(graph.nodes)
 
 		if challenge_rule.can_apply(graph, random_node):
 			challenge_rule.apply(graph, random_node)
@@ -44,7 +55,7 @@ func generate() -> LogicalGraph:
 	if applied < num_challenges:
 		push_warning("GraphRewriter: Only applied %d / %d challenge rules." % [applied, num_challenges])
 
-	var lock_rule := Rule_LockAndKey.new(room_library)
+	var lock_rule := Rule_LockAndKey.new(room_library, rng, verbose_logs)
 	for node in graph.nodes:
 		if lock_rule.can_apply(graph, node):
 			lock_rule.apply(graph, node)
@@ -95,8 +106,112 @@ func generate() -> LogicalGraph:
 			)
 
 	_annotate_routing_zones(graph, start_node)
-	_debug_print_graph(graph)
+	if verbose_logs:
+		_debug_print_graph(graph)
 	return graph
+
+
+func generate_from_config(config: Dictionary) -> LogicalGraph:
+	var logical_graph: Variant = config.get("logical_graph", {})
+	if not logical_graph is Dictionary:
+		push_warning("GraphRewriter: Config has no logical_graph object. Falling back to generate().")
+		return generate()
+
+	var graph := _deserialize_logical_graph(logical_graph as Dictionary)
+
+	if graph.nodes.is_empty():
+		push_warning("GraphRewriter: Config logical_graph has no nodes. Falling back to generate().")
+		return generate()
+
+	var start_node := _find_start_node(graph)
+	_annotate_routing_zones(graph, start_node)
+
+	if verbose_logs:
+		_debug_print_graph(graph)
+
+	return graph
+
+
+func _deserialize_logical_graph(data: Dictionary) -> LogicalGraph:
+	var graph := LogicalGraph.new()
+	var nodes_by_id := {}
+
+	for node_data in data.get("nodes", []):
+		if not node_data is Dictionary:
+			continue
+
+		var node := LogicalNode.new()
+		node.id = str(node_data.get("id", ""))
+		node.assigned_tags.assign(_to_string_array(node_data.get("assigned_tags", [])))
+		node.blueprint = _find_blueprint_for_node(node_data as Dictionary)
+		node.custom_data = (node_data.get("custom_data", {}) as Dictionary).duplicate(true)
+
+		if node.id.is_empty():
+			push_warning("GraphRewriter: Skipping config node with empty id.")
+			continue
+
+		graph.add_node(node)
+		nodes_by_id[node.id] = node
+
+	for edge_data in data.get("edges", []):
+		if not edge_data is Dictionary:
+			continue
+
+		var from_id := str(edge_data.get("from", ""))
+		var to_id := str(edge_data.get("to", ""))
+
+		if not nodes_by_id.has(from_id) or not nodes_by_id.has(to_id):
+			push_warning("GraphRewriter: Skipping config edge with missing endpoint: %s -> %s" % [from_id, to_id])
+			continue
+
+		var edge := LogicalEdge.new()
+		edge.id = str(edge_data.get("id", "%s_to_%s_%d" % [from_id, to_id, graph.edges.size()]))
+		edge.from_node = nodes_by_id[from_id]
+		edge.to_node = nodes_by_id[to_id]
+		edge.edge_type = str(edge_data.get("edge_type", "normal"))
+		edge.tags.assign(_to_string_array(edge_data.get("tags", [])))
+		edge.requirements = (edge_data.get("requirements", {}) as Dictionary).duplicate(true)
+		edge.effects = (edge_data.get("effects", {}) as Dictionary).duplicate(true)
+		edge.custom_data = (edge_data.get("custom_data", {}) as Dictionary).duplicate(true)
+
+		graph.add_edge(edge)
+
+	return graph
+
+
+func _find_blueprint_for_node(node_data: Dictionary) -> RoomBlueprint:
+	var blueprint_path := str(node_data.get("blueprint_path", ""))
+	if not blueprint_path.is_empty():
+		var resource := load(blueprint_path)
+		if resource is RoomBlueprint:
+			return resource as RoomBlueprint
+
+	for tag in _to_string_array(node_data.get("assigned_tags", [])):
+		var blueprint := _find_blueprint_by_tag(tag)
+		if blueprint != null:
+			return blueprint
+
+	return null
+
+
+func _find_start_node(graph: LogicalGraph) -> LogicalNode:
+	for node in graph.nodes:
+		if node.id == "start_01" or node.assigned_tags.has("Entrance"):
+			return node
+
+	return graph.nodes[0]
+
+
+func _to_string_array(value: Variant) -> Array[String]:
+	var result: Array[String] = []
+
+	if not value is Array:
+		return result
+
+	for item in value:
+		result.append(str(item))
+
+	return result
 
 
 func _create_basic_node(tag: String, id: String) -> LogicalNode:
@@ -114,7 +229,14 @@ func _find_blueprint_by_tag(target_tag: String) -> RoomBlueprint:
 		if blueprint.possible_tags.has(target_tag):
 			valid.append(blueprint)
 
-	return valid.pick_random() if valid.size() > 0 else null
+	return _pick_from_array(valid)
+
+func _pick_from_array(items: Array) -> Variant:
+	if items.is_empty():
+		return null
+	if rng == null:
+		return items[0]
+	return items[rng.randi_range(0, items.size() - 1)]
 
 func _find_first_node_with_tag(graph: LogicalGraph, tag: String) -> LogicalNode:
 	for node in graph.nodes:

@@ -15,13 +15,13 @@ func apply(graph: LogicalGraph, target_node: LogicalNode) -> void:
 	var next_node: LogicalNode = edge_to_split.to_node
 
 	var challenge_node := LogicalNode.new()
-	challenge_node.id = "challenge_" + str(randi())
+	var challenge_suffix := rng.randi() if rng != null else graph.nodes.size()
+	challenge_node.id = "challenge_%d" % challenge_suffix
 	challenge_node.assigned_tags.assign(["Alive"])
 	challenge_node.blueprint = get_blueprint("Alive")
 
 	graph.insert_node_between(challenge_node, target_node, next_node)
-
-	print("Regissör: Lade till utmaning mellan ", target_node.id, " och ", next_node.id)
+	log_verbose("Regissor: added challenge between %s and %s" % [target_node.id, next_node.id])
 
 
 func _pick_splittable_edge(target_node: LogicalNode) -> LogicalEdge:

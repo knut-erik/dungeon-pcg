@@ -32,7 +32,7 @@ var _last_debug_looked_tags: Array[String] = []
 @onready var interact_ray: RayCast3D = $Head/InteractRay
 
 @onready var agent_controller: AIController3D = $AIController3D
-var sync_node : Sync
+var sync_node: Sync
 
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
@@ -65,7 +65,6 @@ func _ready() -> void:
 
 func _input(event: InputEvent) -> void:
 	if use_agent_control:
-		
 		return
 
 	if event is InputEventMouseMotion and game_state == GameState.PLAYING:
@@ -298,7 +297,7 @@ func _try_interact() -> void:
 		_get_rl_tags_from_hierarchy(interactable)
 	)
 
-	interactable.interact(self)
+	interactable.interact(self )
 
 
 func _find_interactable(start_node: Node) -> Node:

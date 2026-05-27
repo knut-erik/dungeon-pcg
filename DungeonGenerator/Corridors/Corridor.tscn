@@ -1,6 +1,4 @@
-[gd_scene format=3 uid="uid://272iwhalksmb"]
-
-[ext_resource type="Material" uid="uid://cibcmc5ulitt7" path="res://Assets/Materials/stone_bricks.tres" id="1_ere7x"]
+[gd_scene load_steps=3 format=3 uid="uid://272iwhalksmb"]
 
 [sub_resource type="Curve3D" id="Curve3D_6yffq"]
 
@@ -148,7 +146,7 @@ func generate_spline(gateway_a: Marker3D, gateway_b: Marker3D):
 		inner_polygon.path_node = NodePath(\"../..\")'''
 "
 
-[node name="Path3D" type="Path3D" unique_id=1017574303]
+[node name="Path3D" type="Path3D"]
 curve = SubResource("Curve3D_6yffq")
 script = SubResource("GDScript_3rsfl")
 

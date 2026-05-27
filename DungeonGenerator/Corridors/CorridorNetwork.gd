@@ -15,6 +15,9 @@ const GATEWAY_SIDEWALL_ALIGN_TOL := 0.30
 const GATEWAY_SIDEWALL_DOT_LIMIT := -0.75
 const GATEWAY_RESERVED_THROAT_STEPS := 6
 const GATEWAY_RESERVED_THROAT_HALF_WIDTH := CORRIDOR_WIDTH * 0.5 + 0.10
+const GATEWAY_CORNER_PLUG_OVERLAP := 0.30
+const GATEWAY_CORNER_PLUG_DEPTH := SLAB_T * 2.0
+const STAIR_CLEARANCE_MARGIN := CORRIDOR_WIDTH * 0.5 + ROOM_WALL_CUT_MARGIN + WALL_MERGE_EPS
 
 const ROUTING_ZONE_KEY := "routing_zone"
 
@@ -25,13 +28,17 @@ var _pending_corridor_records: Array[Dictionary] = []
 var _active_routing_zone: String = "default"
 var _csg_root: CSGCombiner3D
 var _room_aabbs: Array[AABB] = []
+var _room_aabb_records: Array[Dictionary] = []
 var _stair_rooms: Array[BaseRoom] = []
 var _stair_aabbs: Array[AABB] = []
+var _stair_clearance_aabbs: Array[AABB] = []
 var _footprints: Array[Dictionary] = []
 var _gateway_openings: Array[Dictionary] = [] # { "pos": Vector3, "dir": Vector2 }
 var _room_library: Array[RoomBlueprint] = []
+var _rng: RandomNumberGenerator
 var _active_edge_id: String = ""
 var _reserved_gateway_throats: Array[Dictionary] = []
+var _gateway_corner_plug_count := 0
 
 const ASTAR_SEARCH_MARGIN_GRID := 80
 const ASTAR_MAX_ITERATIONS := 50000
@@ -42,11 +49,23 @@ const ASTAR_MAX_ITERATIONS := 50000
 const ASTAR_CANDIDATE_SEARCH_MARGIN_GRID := 28
 const ASTAR_CANDIDATE_MAX_ITERATIONS := 4000
 
-func build(connections: Array, room_aabbs: Array, room_library: Array[RoomBlueprint]) -> void:
+func build(
+		connections: Array,
+		room_aabbs: Array,
+		room_library: Array[RoomBlueprint],
+		rng: RandomNumberGenerator = null
+	) -> bool:
 	_csg_root = CSGCombiner3D.new()
 	add_child(_csg_root)
+	var route_failed := false
+	_rng = rng
+	if _rng == null:
+		_rng = RandomNumberGenerator.new()
+		_rng.seed = 1
 	
-	_csg_root.use_collision = true
+	# Collision generation is expensive while many CSG children are still being added.
+	# seal_unused_gateways() enables it once final corridor geometry is complete.
+	_csg_root.use_collision = false
 	
 	var mat := StandardMaterial3D.new()
 	mat.albedo_texture = load("res://Assets/texture/RockPillar/Color.png")
@@ -58,17 +77,20 @@ func build(connections: Array, room_aabbs: Array, room_library: Array[RoomBluepr
 	_csg_root.material_override = mat
 	
 	_room_aabbs.assign(room_aabbs)
+	_rebuild_room_aabb_records()
 	_room_library = room_library
 
 	_footprints.clear()
 	_gateway_openings.clear()
 	_stair_rooms.clear()
 	_stair_aabbs.clear()
+	_stair_clearance_aabbs.clear()
 	_pending_polylines.clear()
 	_pending_corridor_aabbs.clear()
 	_pending_polyline_records.clear()
 	_pending_corridor_records.clear()
 	_reserved_gateway_throats.clear()
+	_gateway_corner_plug_count = 0
 	_active_routing_zone = "default"
 	_active_edge_id = ""
 
@@ -99,6 +121,7 @@ func build(connections: Array, room_aabbs: Array, room_library: Array[RoomBluepr
 
 		if not ga or not gb:
 			push_warning("CorridorNetwork: PhysicalConnection missing gateway anchors.")
+			route_failed = true
 			continue
 		
 		# -- STAIR INJECTION INTERCEPT --
@@ -110,17 +133,30 @@ func build(connections: Array, room_aabbs: Array, room_library: Array[RoomBluepr
 			else:
 				push_warning("Candidate stair routing failed. Falling back to polyline stair injection.")
 				var fallback_polyline = _route_connection(ga, gb, true, true)
-				if not fallback_polyline.is_empty():
-					_register_gateway_opening(ga, pc.logical_edge)
-					_register_gateway_opening(gb, pc.logical_edge)
-					await _inject_stairs_and_split(fallback_polyline, ga, gb)
+				if fallback_polyline.is_empty():
+					push_warning("CorridorNetwork: vertical route failed; no fallback polyline for edge %s" % _active_edge_id)
+					route_failed = true
+					continue
+
+				var injected := await _inject_stairs_and_split(fallback_polyline, ga, gb)
+				if not injected:
+					push_warning("CorridorNetwork: vertical route failed; stair injection failed for edge %s" % _active_edge_id)
+					route_failed = true
+					continue
+
+				_register_gateway_opening(ga, pc.logical_edge)
+				_register_gateway_opening(gb, pc.logical_edge)
 			continue
 
 		var flat_polyline = _route_connection(ga, gb, false)
-		if not flat_polyline.is_empty():
-			_register_gateway_opening(ga, pc.logical_edge)
-			_register_gateway_opening(gb, pc.logical_edge)
-			_commit_polyline(flat_polyline)
+		if flat_polyline.is_empty():
+			push_warning("CorridorNetwork: flat route failed for edge %s" % _active_edge_id)
+			route_failed = true
+			continue
+
+		_register_gateway_opening(ga, pc.logical_edge)
+		_register_gateway_opening(gb, pc.logical_edge)
+		_commit_polyline(flat_polyline)
 
 	# Phase 2: route junction (key-branch) connections.
 	# All main-path corridors are now committed so _find_junction_point can
@@ -129,7 +165,10 @@ func build(connections: Array, room_aabbs: Array, room_library: Array[RoomBluepr
 	for pc in junction_connections:
 		_active_routing_zone = _get_edge_routing_zone(pc.logical_edge)
 		_active_edge_id = pc.logical_edge.id if pc.logical_edge != null else ""
-		_route_junction_connection(pc)
+		var junction_success := _route_junction_connection(pc)
+		if not junction_success:
+			push_warning("CorridorNetwork: junction route failed for edge %s" % _active_edge_id)
+			route_failed = true
 
 	_active_routing_zone = "default"
 
@@ -139,10 +178,16 @@ func build(connections: Array, room_aabbs: Array, room_library: Array[RoomBluepr
 		" committed_gateway_openings=",
 		_gateway_openings.size(),
 		" reserved_gateway_throats=",
-		_reserved_gateway_throats.size()
+		_reserved_gateway_throats.size(),
+		" route_failed=",
+		route_failed
 	)
 
+	if route_failed:
+		return false
+
 	_generate_queued_geometry()
+	return true
 
 # ── JUNCTION ROUTING ─────────────────────────────────────────────────────────
 
@@ -174,26 +219,29 @@ func _find_junction_point(key_room_pos: Vector3, routing_zone: String = "default
 	return best
 
 
-func _route_junction_connection(pc: PhysicalConnection) -> void:
+func _route_junction_connection(pc: PhysicalConnection) -> bool:
 	var gb: Marker3D = pc.to_anchor.gateway
 	if not gb:
 		push_warning("Junction: no to_gateway for edge %s" % pc.logical_edge.id)
-		return
+		return false
 
 	var key_pos := gb.global_position
 	var junction_pos := _find_junction_point(key_pos, _active_routing_zone)
 
 	if junction_pos.x == INF:
 		push_warning("Junction: no committed corridor at Y=%.1f to branch from." % key_pos.y)
-		return
+		return false
 
 	# Use key room Y exactly so there is no height mismatch.
 	junction_pos.y = key_pos.y
 
 	var polyline := _route_from_point(junction_pos, gb)
-	if not polyline.is_empty():
-		_register_gateway_opening(gb, pc.logical_edge)
-		_commit_polyline(polyline)
+	if polyline.is_empty():
+		return false
+
+	_register_gateway_opening(gb, pc.logical_edge)
+	_commit_polyline(polyline)
+	return true
 
 
 func _route_from_point(start_pos: Vector3, gb: Marker3D, quiet: bool = false) -> PackedVector3Array:
@@ -257,13 +305,13 @@ func _route_vertical_connection_with_stair_candidates(ga: Marker3D, gb: Marker3D
 		push_error("CorridorNetwork: No blueprints found with the 'Stairs' tag!")
 		return false
 
-	var chosen_blueprint = stair_blueprints.pick_random()
+	var chosen_blueprint = stair_blueprints[_rng.randi_range(0, stair_blueprints.size() - 1)]
 	var stair_room = chosen_blueprint.room_scene.instantiate() as BaseRoom
 	get_parent().add_child(stair_room)
 
 	var dummy_logic := LogicalNode.new()
 	dummy_logic.custom_data["delta_y"] = delta_y
-	await stair_room.setup_room(RandomNumberGenerator.new(), dummy_logic)
+	await stair_room.setup_room(_rng, dummy_logic)
 	await get_tree().process_frame
 
 	var gw_in_local: Vector3 = stair_room.gateway_in.position
@@ -316,7 +364,7 @@ func _route_vertical_connection_with_stair_candidates(ga: Marker3D, gb: Marker3D
 				var room_aabb_count_before_candidate := _room_aabbs.size()
 
 				for aabb in candidate_aabbs:
-					_room_aabbs.append(aabb)
+					_append_room_aabb(aabb)
 
 				var path_to_stairs := _route_connection(
 					ga,
@@ -370,28 +418,28 @@ func _gateway_has_clear_first_step(from_gateway: Marker3D, to_gateway: Marker3D)
 	var max_y := maxf(pos_a.y, pos_b.y)
 
 	var start_owner := _find_owner_aabb_index(pos_a)
-	var ignored: Array[int] = []
+	var ignored := -1
 
 	if start_owner != -1 and _edge_in_gateway_throat(start2i, first_step, start2i, Vector2i(roundi(out_dir_a.x), roundi(out_dir_a.z))):
-		ignored.append(start_owner)
+		ignored = start_owner
 
 	return _is_edge_valid(start2i, first_step, min_y, max_y, ignored)
 
-func _inject_stairs_and_split(polyline: PackedVector3Array, ga: Marker3D, gb: Marker3D) -> void:
+func _inject_stairs_and_split(polyline: PackedVector3Array, ga: Marker3D, gb: Marker3D) -> bool:
 	var delta_y := gb.global_position.y - ga.global_position.y
 	
 	var stair_blueprints = _room_library.filter(func(bp): return bp.possible_tags.has("Stairs"))
 	if stair_blueprints.is_empty():
 		push_error("CorridorNetwork: No blueprints found with the 'Stairs' tag!")
-		return
-	var chosen_blueprint = stair_blueprints.pick_random()
+		return false
+	var chosen_blueprint = stair_blueprints[_rng.randi_range(0, stair_blueprints.size() - 1)]
 	
 	var stair_room = chosen_blueprint.room_scene.instantiate() as BaseRoom
 	get_parent().add_child(stair_room)
 	
 	var dummy_logic = LogicalNode.new()
 	dummy_logic.custom_data["delta_y"] = delta_y
-	await stair_room.setup_room(RandomNumberGenerator.new(), dummy_logic)
+	await stair_room.setup_room(_rng, dummy_logic)
 	
 	await get_tree().process_frame
 	
@@ -409,7 +457,7 @@ func _inject_stairs_and_split(polyline: PackedVector3Array, ga: Marker3D, gb: Ma
 	if segment_indices.is_empty():
 		push_warning("Stair Injection Failed! No XZ segment long enough for stairs %.1f." % req_length)
 		stair_room.queue_free()
-		return
+		return false
 
 	segment_indices.sort_custom(func(a: int, b: int) -> bool:
 		return polyline[a].distance_to(polyline[a + 1]) > polyline[b].distance_to(polyline[b + 1])
@@ -453,12 +501,12 @@ func _inject_stairs_and_split(polyline: PackedVector3Array, ga: Marker3D, gb: Ma
 	if not placed_stairs:
 		push_warning("Stair Injection Failed! Stair room would overlap an already-routed corridor.")
 		stair_room.queue_free()
-		return
+		return false
 	
 	var room_aabb_count_before_stair := _room_aabbs.size()
 
 	for world_aabb in stair_room.get_world_aabbs():
-		_room_aabbs.append(world_aabb)
+		_append_room_aabb(world_aabb)
 
 	var path_to_stairs := _route_connection(ga, stair_room.gateway_in, false)
 	var path_from_stairs := _route_connection(stair_room.gateway_out, gb, false)
@@ -467,7 +515,7 @@ func _inject_stairs_and_split(polyline: PackedVector3Array, ga: Marker3D, gb: Ma
 		push_warning("Stair Injection Failed! Could not route both sides of injected stair.")
 		_truncate_room_aabbs(room_aabb_count_before_stair)
 		stair_room.queue_free()
-		return
+		return false
 
 	_remember_stair_aabbs(stair_room)
 
@@ -478,6 +526,7 @@ func _inject_stairs_and_split(polyline: PackedVector3Array, ga: Marker3D, gb: Ma
 	_commit_polyline(path_from_stairs)
 
 	_stair_rooms.append(stair_room)
+	return true
 
 # ── ROUTING ──────────────────────────────────────────────────────────────────
 
@@ -561,8 +610,9 @@ func _route_connection(
 
 
 func _find_owner_aabb_index(world_pos: Vector3, quiet: bool = false) -> int:
-	for i in range(_room_aabbs.size()):
-		if _room_aabbs[i].grow(0.35).has_point(world_pos):
+	for i in range(_room_aabb_records.size()):
+		var grown_aabb := _room_aabb_records[i]["grown_aabb"] as AABB
+		if grown_aabb.has_point(world_pos):
 			return i
 
 	if not quiet:
@@ -602,9 +652,9 @@ func _directional_astar(
 		if out_a != Vector2i.ZERO and final_step != out_a:
 			return []
 
-		var ignored_final: Array[int] = []
+		var ignored_final := -1
 		if goal_owner != -1 and _edge_in_gateway_throat(start, goal, goal, out_b):
-			ignored_final.append(goal_owner)
+			ignored_final = goal_owner
 
 		if _is_edge_valid(start, goal, min_y, max_y, ignored_final):
 			return [start, goal]
@@ -655,10 +705,10 @@ func _directional_astar(
 				path.insert(0, curr)
 
 			if astar_goal != goal:
-				var ignored_final: Array[int] = []
+				var ignored_final := -1
 
 				if goal_owner != -1 and _edge_in_gateway_throat(astar_goal, goal, goal, out_b):
-					ignored_final.append(goal_owner)
+					ignored_final = goal_owner
 
 				if not _is_edge_valid(astar_goal, goal, min_y, max_y, ignored_final):
 					return []
@@ -688,15 +738,16 @@ func _directional_astar(
 			if is_start and out_a != Vector2i.ZERO and d != out_a:
 				continue
 
-			var ignored_aabb_indices: Array[int] = []
+			var ignored_aabb_a := -1
+			var ignored_aabb_b := -1
 
 			if start_owner != -1 and _edge_in_gateway_throat(curr, nxt, start, out_a):
-				ignored_aabb_indices.append(start_owner)
+				ignored_aabb_a = start_owner
 
 			if goal_owner != -1 and out_b != Vector2i.ZERO and _edge_in_gateway_throat(curr, nxt, goal, out_b):
-				ignored_aabb_indices.append(goal_owner)
+				ignored_aabb_b = goal_owner
 
-			if not _is_edge_valid(curr, nxt, min_y, max_y, ignored_aabb_indices):
+			if not _is_edge_valid(curr, nxt, min_y, max_y, ignored_aabb_a, ignored_aabb_b):
 				continue
 
 			var tentative_g: float = g_score[curr] + 1.0
@@ -788,7 +839,14 @@ class _BinHeap:
 
 # ── EXACT COLLISION CHECKING ─────────────────────────────────────────────────
 
-func _is_edge_valid(p1: Vector2i, p2: Vector2i, min_y: float, max_y: float, ignored_aabb_indices: Array[int]) -> bool:
+func _is_edge_valid(
+	p1: Vector2i,
+	p2: Vector2i,
+	min_y: float,
+	max_y: float,
+	ignored_aabb_a: int = -1,
+	ignored_aabb_b: int = -1
+) -> bool:
 	var w := CORRIDOR_WIDTH
 	var p1f := Vector2(p1) / GRID_SCALE
 	var p2f := Vector2(p2) / GRID_SCALE
@@ -808,18 +866,37 @@ func _is_edge_valid(p1: Vector2i, p2: Vector2i, min_y: float, max_y: float, igno
 	var corr_top := max_y + CORRIDOR_HEIGHT
 	var corr_bottom := min_y
 
-	for i in range(_room_aabbs.size()):
-		if ignored_aabb_indices.has(i):
+	for i in range(_room_aabb_records.size()):
+		if i == ignored_aabb_a or i == ignored_aabb_b:
 			continue
 
-		var aabb := _room_aabbs[i]
+		var record := _room_aabb_records[i]
+		var y_min := float(record["y_min"])
+		var y_max := float(record["y_max"])
 
-		if aabb.position.y + aabb.size.y <= corr_bottom or aabb.position.y >= corr_top:
+		if y_max <= corr_bottom or y_min >= corr_top:
 			continue
 
-		var room_rect := Rect2(aabb.position.x, aabb.position.z, aabb.size.x, aabb.size.z)
+		var room_rect := record["rect"] as Rect2
 
 		if rect.intersects(room_rect):
+			return false
+
+	for stair_clearance in _stair_clearance_aabbs:
+		if stair_clearance.position.y + stair_clearance.size.y <= corr_bottom:
+			continue
+
+		if stair_clearance.position.y >= corr_top:
+			continue
+
+		var stair_clearance_rect := Rect2(
+			stair_clearance.position.x,
+			stair_clearance.position.z,
+			stair_clearance.size.x,
+			stair_clearance.size.z
+		)
+
+		if rect.intersects(stair_clearance_rect):
 			return false
 
 	# Same-zone corridors may merge freely at the same height (T-junctions, overlaps).
@@ -855,19 +932,22 @@ func _is_edge_valid(p1: Vector2i, p2: Vector2i, min_y: float, max_y: float, igno
 func _generate_queued_geometry() -> void:
 	_footprints.clear()
 
-	for polyline in _pending_polylines:
-		_register_footprints(polyline)
+	for record in _pending_polyline_records:
+		var polyline := record["polyline"] as PackedVector3Array
+		var routing_zone := str(record.get("routing_zone", "default"))
+		_register_footprints(polyline, routing_zone)
 
 	for polyline in _pending_polylines:
 		_generate_slabs(polyline)
 
-	for polyline in _pending_polylines:
-		_generate_walls(polyline)
+	for record in _pending_polyline_records:
+		var polyline := record["polyline"] as PackedVector3Array
+		var routing_zone := str(record.get("routing_zone", "default"))
+		_generate_walls(polyline, routing_zone)
 	
-	# Disable until routing is stable again.
-	# _generate_gateway_corner_plugs()
+	_generate_gateway_corner_plugs()
 
-func _register_footprints(polyline: PackedVector3Array) -> void:
+func _register_footprints(polyline: PackedVector3Array, routing_zone: String) -> void:
 	var w := CORRIDOR_WIDTH
 
 	# Corner/junction squares.
@@ -875,7 +955,8 @@ func _register_footprints(polyline: PackedVector3Array) -> void:
 		var p := polyline[i]
 		_footprints.append({
 			"rect": Rect2(p.x - w / 2.0, p.z - w / 2.0, w, w),
-			"y": p.y
+			"y": p.y,
+			"routing_zone": routing_zone
 		})
 
 	# Segment rectangles.
@@ -893,7 +974,8 @@ func _register_footprints(polyline: PackedVector3Array) -> void:
 
 		_footprints.append({
 			"rect": Rect2(fp_x, fp_z, fp_w, fp_h),
-			"y": fa.y
+			"y": fa.y,
+			"routing_zone": routing_zone
 		})
 
 func _generate_slabs(polyline: PackedVector3Array) -> void:
@@ -918,7 +1000,7 @@ func _generate_slabs(polyline: PackedVector3Array) -> void:
 		_make_box(size, Vector3(mid.x, fa.y + SLAB_T / 2.0, mid.z))
 		_make_box(size, Vector3(mid.x, fa.y + h - SLAB_T / 2.0, mid.z))
 
-func _generate_walls(polyline: PackedVector3Array) -> void:
+func _generate_walls(polyline: PackedVector3Array, routing_zone: String) -> void:
 	var w := CORRIDOR_WIDTH
 	var h := CORRIDOR_HEIGHT
 
@@ -953,7 +1035,8 @@ func _generate_walls(polyline: PackedVector3Array) -> void:
 					wall_z,
 					true,
 					sign_dir,
-					fa.y
+					fa.y,
+					routing_zone
 				)
 
 				for iv in intervals:
@@ -985,7 +1068,8 @@ func _generate_walls(polyline: PackedVector3Array) -> void:
 					wall_x,
 					false,
 					sign_dir,
-					fa.y
+					fa.y,
+					routing_zone
 				)
 
 				for iv in intervals:
@@ -1016,10 +1100,10 @@ func _commit_polyline(polyline: PackedVector3Array, routing_zone: String = "") -
 
 func _candidate_aabbs_hit_pending_corridors(candidate_aabbs: Array[AABB]) -> bool:
 	for candidate in candidate_aabbs:
-		for polyline in _pending_polylines:
-			for corridor_aabb in _polyline_to_corridor_aabbs(polyline):
-				if candidate.grow(0.15).intersects(corridor_aabb.grow(0.15)):
-					return true
+		var grown_candidate := candidate.grow(0.15)
+		for corridor_aabb in _pending_corridor_aabbs:
+			if grown_candidate.intersects(corridor_aabb.grow(0.15)):
+				return true
 
 	return false
 
@@ -1084,7 +1168,8 @@ func _get_exposed_intervals(
 		orthogonal_pos: float,
 		is_horizontal: bool,
 		outside_sign: float,
-		wall_y: float
+		wall_y: float,
+		routing_zone: String
 	) -> Array:
 	var uncovered := [[start, end]]
 
@@ -1097,6 +1182,10 @@ func _get_exposed_intervals(
 	for fp_data in _footprints:
 		var fp_y := float(fp_data["y"])
 		if absf(fp_y - wall_y) > Y_EPS:
+			continue
+
+		var other_zone := str(fp_data.get("routing_zone", "default"))
+		if not _corridor_zones_can_merge(routing_zone, other_zone):
 			continue
 
 		var fp := fp_data["rect"] as Rect2
@@ -1127,14 +1216,7 @@ func _get_exposed_intervals(
 		var is_stair := _is_stair_aabb(aabb)
 		
 		if is_stair:
-			# Stair AABBs are often exactly corridor-width, so boundary-inclusive
-			# cutting is still needed to avoid stair-side wall pillars.
-			if orthogonal_pos >= rm_ortho_min - ROOM_WALL_CUT_MARGIN and orthogonal_pos <= rm_ortho_max + ROOM_WALL_CUT_MARGIN:
-				uncovered = _subtract_interval_list(
-					uncovered,
-					rm_start - ROOM_WALL_CUT_MARGIN,
-					rm_end + ROOM_WALL_CUT_MARGIN
-				)
+			continue
 		else:
 			# Only cut walls when the corridor center is well inside the room's
 			# orthogonal extent. A half-corridor-width inset prevents false cuts
@@ -1154,6 +1236,10 @@ func _get_exposed_intervals(
 	for gw_data: Dictionary in _gateway_openings:
 		var gw_pos: Vector3 = gw_data["pos"]
 		var gw_dir: Vector2 = gw_data["dir"]
+		var gw_zone := str(gw_data.get("routing_zone", "default"))
+
+		if not _corridor_zones_can_merge(routing_zone, gw_zone):
+			continue
 
 		if absf(gw_pos.y - wall_y) > CORRIDOR_HEIGHT:
 			continue
@@ -1250,12 +1336,14 @@ func seal_unused_gateways(rooms: Array) -> void:
 	if _csg_root == null:
 		push_warning("CorridorNetwork: seal_unused_gateways called before build()")
 		return
+	_csg_root.use_collision = false
 	for room in rooms:
 		if not room is BaseRoom:
 			continue
 		for gateway in (room as BaseRoom).get_gateways():
 			if gateway.connected_edges.is_empty():
 				_seal_gateway(gateway)
+	_csg_root.use_collision = true
 
 
 func _seal_gateway(gateway: Gateway) -> void:
@@ -1280,26 +1368,55 @@ func get_stair_rooms() -> Array[BaseRoom]:
 
 func _candidate_aabbs_hit_rooms(candidate_aabbs: Array[AABB]) -> bool:
 	for candidate in candidate_aabbs:
-		for existing in _room_aabbs:
-			if candidate.grow(0.25).intersects(existing.grow(0.25)):
+		var grown_candidate := candidate.grow(0.25)
+		for record in _room_aabb_records:
+			var existing := record["aabb"] as AABB
+			if grown_candidate.intersects(existing.grow(0.25)):
 				return true
 
 	return false
 
+func _append_room_aabb(aabb: AABB) -> void:
+	_room_aabbs.append(aabb)
+	_room_aabb_records.append(_make_room_aabb_record(aabb))
+
+func _rebuild_room_aabb_records() -> void:
+	_room_aabb_records.clear()
+	for aabb in _room_aabbs:
+		_room_aabb_records.append(_make_room_aabb_record(aabb))
+
+func _make_room_aabb_record(aabb: AABB) -> Dictionary:
+	return {
+		"aabb": aabb,
+		"grown_aabb": aabb.grow(0.35),
+		"rect": Rect2(aabb.position.x, aabb.position.z, aabb.size.x, aabb.size.z),
+		"y_min": aabb.position.y,
+		"y_max": aabb.position.y + aabb.size.y
+	}
+
 func _truncate_room_aabbs(target_size: int) -> void:
 	while _room_aabbs.size() > target_size:
 		_room_aabbs.pop_back()
+	while _room_aabb_records.size() > target_size:
+		_room_aabb_records.pop_back()
 
 func _remember_stair_aabbs(stair_room: BaseRoom) -> void:
 	for world_aabb in stair_room.get_world_aabbs():
 		_stair_aabbs.append(world_aabb)
+		_stair_clearance_aabbs.append(world_aabb.grow(STAIR_CLEARANCE_MARGIN))
 
 func _is_stair_aabb(aabb: AABB) -> bool:
 	for stair_aabb in _stair_aabbs:
-		if aabb.position.distance_to(stair_aabb.position) < 0.1 and aabb.size.distance_to(stair_aabb.size) < 0.1:
+		if _aabbs_same_footprint(aabb, stair_aabb):
 			return true
 
 	return false
+
+func _aabbs_same_footprint(a: AABB, b: AABB) -> bool:
+	return (
+		a.position.distance_to(b.position) < 0.1
+		and a.size.distance_to(b.size) < 0.1
+	)
 
 func _edge_blocks_reserved_gateway_throat(
 	p1: Vector2i,
@@ -1469,9 +1586,39 @@ func _generate_gateway_corner_plugs() -> void:
 		if gw_dir == Vector2.ZERO:
 			continue
 
-		_generate_gateway_corner_plugs_for(gw_pos, gw_dir)
+		var room_aabb := _find_gateway_room_aabb(gw_pos)
+		if room_aabb.size == Vector3.ZERO:
+			continue
 
-func _generate_gateway_corner_plugs_for(gw_pos: Vector3, gw_dir: Vector2) -> void:
+		_generate_gateway_corner_plugs_for(gw_pos, gw_dir, room_aabb)
+
+	print("CorridorNetwork: gateway_corner_plugs=", _gateway_corner_plug_count)
+
+func _find_gateway_room_aabb(gw_pos: Vector3) -> AABB:
+	var best := AABB()
+	var best_dist := INF
+
+	for aabb in _room_aabbs:
+		if gw_pos.y < aabb.position.y - CORRIDOR_HEIGHT:
+			continue
+
+		if gw_pos.y > aabb.position.y + aabb.size.y + CORRIDOR_HEIGHT:
+			continue
+
+		var gw_flat := Vector2(gw_pos.x, gw_pos.z)
+		var rect := Rect2(aabb.position.x, aabb.position.z, aabb.size.x, aabb.size.z).grow(0.35)
+		if not rect.has_point(gw_flat):
+			continue
+
+		var center := aabb.position + aabb.size * 0.5
+		var dist := Vector2(gw_pos.x - center.x, gw_pos.z - center.z).length()
+		if dist < best_dist:
+			best_dist = dist
+			best = aabb
+
+	return best
+
+func _generate_gateway_corner_plugs_for(gw_pos: Vector3, gw_dir: Vector2, room_aabb: AABB) -> void:
 	var h := CORRIDOR_HEIGHT
 	var t := SLAB_T
 	var half_w := CORRIDOR_WIDTH * 0.5
@@ -1479,66 +1626,63 @@ func _generate_gateway_corner_plugs_for(gw_pos: Vector3, gw_dir: Vector2) -> voi
 	var side_a := Vector2(-gw_dir.y, gw_dir.x)
 	var side_b := -side_a
 
-	_try_make_gateway_side_plug(gw_pos, gw_dir, side_a, half_w, h, t)
-	_try_make_gateway_side_plug(gw_pos, gw_dir, side_b, half_w, h, t)
+	_try_make_gateway_side_plug(gw_pos, gw_dir, side_a, room_aabb, half_w, h, t)
+	_try_make_gateway_side_plug(gw_pos, gw_dir, side_b, room_aabb, half_w, h, t)
 
 func _try_make_gateway_side_plug(
 	gw_pos: Vector3,
 	gw_dir: Vector2,
 	side_dir: Vector2,
+	room_aabb: AABB,
 	half_w: float,
 	h: float,
-	t: float
+	_t: float
 ) -> void:
-	# If corridor/room footprint exists on this side, no plug is needed.
-	var side_probe := Vector2(gw_pos.x, gw_pos.z) + side_dir * (half_w + t * 2.0)
-	
-	if _gateway_side_has_room_support(gw_pos, side_dir):
-		return
-	
-	if _point_inside_any_same_y_footprint(side_probe, gw_pos.y):
+	var side_point := Vector2(gw_pos.x, gw_pos.z) + side_dir * half_w
+
+	if _gateway_side_is_supported_by_room(side_point, side_dir, room_aabb):
 		return
 
-	# Build a short wall running outward from the room along the gateway side.
-	# This closes the exposed corner gap when the gateway is at a room corner.
-	var plug_len := CORRIDOR_WIDTH
+	var overhang := _gateway_side_overhang(side_point, side_dir, room_aabb)
+	if overhang <= 0.05:
+		return
+
+	var plug_span := overhang + GATEWAY_CORNER_PLUG_OVERLAP * 2.0
 	var plug_center_2d := Vector2(gw_pos.x, gw_pos.z)
-	plug_center_2d += side_dir * (half_w + t * 0.5)
-	plug_center_2d += gw_dir * (plug_len * 0.5)
+	plug_center_2d += side_dir * (half_w - overhang * 0.5)
+	plug_center_2d += gw_dir * (GATEWAY_CORNER_PLUG_DEPTH * 0.5)
 
 	var size: Vector3
 	var pos := Vector3(plug_center_2d.x, gw_pos.y + h * 0.5, plug_center_2d.y)
 
 	if absf(gw_dir.x) > absf(gw_dir.y):
-		# Plug wall runs along X, thickness along Z.
-		size = Vector3(plug_len, h, t)
+		# Gateway opens along X, so the cap lies on the room wall plane and spans Z.
+		size = Vector3(GATEWAY_CORNER_PLUG_DEPTH, h, plug_span)
 	else:
-		# Plug wall runs along Z, thickness along X.
-		size = Vector3(t, h, plug_len)
+		# Gateway opens along Z, so the cap lies on the room wall plane and spans X.
+		size = Vector3(plug_span, h, GATEWAY_CORNER_PLUG_DEPTH)
 
 	_make_box(size, pos)
+	_gateway_corner_plug_count += 1
 
-func _point_inside_any_same_y_footprint(point: Vector2, y: float) -> bool:
-	for fp_data in _footprints:
-		var fp_y := float(fp_data["y"])
-		if absf(fp_y - y) > Y_EPS:
-			continue
+func _gateway_side_overhang(side_point: Vector2, side_dir: Vector2, room_aabb: AABB) -> float:
+	if absf(side_dir.x) > 0.5:
+		if side_dir.x > 0.0:
+			return side_point.x - (room_aabb.position.x + room_aabb.size.x)
+		return room_aabb.position.x - side_point.x
 
-		var rect := fp_data["rect"] as Rect2
-		if rect.has_point(point):
-			return true
+	if side_dir.y > 0.0:
+		return side_point.y - (room_aabb.position.z + room_aabb.size.z)
+	return room_aabb.position.z - side_point.y
 
-	return false
+func _gateway_side_is_supported_by_room(side_point: Vector2, side_dir: Vector2, room_aabb: AABB) -> bool:
+	var margin := 0.05
 
-func _gateway_side_has_room_support(gw_pos: Vector3, side_dir: Vector2) -> bool:
-	var probe := Vector3(
-		gw_pos.x + side_dir.x * (CORRIDOR_WIDTH * 0.5 + 0.15),
-		gw_pos.y + 0.5,
-		gw_pos.z + side_dir.y * (CORRIDOR_WIDTH * 0.5 + 0.15)
-	)
+	if absf(side_dir.x) > 0.5:
+		var min_x := room_aabb.position.x - margin
+		var max_x := room_aabb.position.x + room_aabb.size.x + margin
+		return side_point.x >= min_x and side_point.x <= max_x
 
-	for aabb in _room_aabbs:
-		if aabb.grow(0.05).has_point(probe):
-			return true
-
-	return false
+	var min_z := room_aabb.position.z - margin
+	var max_z := room_aabb.position.z + room_aabb.size.z + margin
+	return side_point.y >= min_z and side_point.y <= max_z
