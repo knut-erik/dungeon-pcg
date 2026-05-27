@@ -13,18 +13,18 @@ func can_apply(_graph: LogicalGraph, target_node: LogicalNode) -> bool:
 	var edge_to_boss := _find_edge_to_boss(target_node)
 
 	if lock_blueprint == null:
-		print("Rule_LockAndKey: cannot apply, no blueprint with tag Locked")
+		log_verbose("Rule_LockAndKey: cannot apply, no blueprint with tag Locked")
 		return false
 
 	if key_blueprint == null:
-		print("Rule_LockAndKey: cannot apply, no blueprint with tag Key")
+		log_verbose("Rule_LockAndKey: cannot apply, no blueprint with tag Key")
 		return false
 
 	if edge_to_boss == null:
-		print("Rule_LockAndKey: cannot apply to ", target_node.id, ", no outgoing edge to Boss")
+		log_verbose("Rule_LockAndKey: cannot apply to %s, no outgoing edge to Boss" % target_node.id)
 		return false
 
-	print("Rule_LockAndKey: can apply to ", target_node.id)
+	log_verbose("Rule_LockAndKey: can apply to %s" % target_node.id)
 	return true
 
 func apply(graph: LogicalGraph, target_node: LogicalNode) -> void:

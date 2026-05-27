@@ -31,6 +31,9 @@ var _last_debug_looked_tags: Array[String] = []
 @onready var head: Node3D = $Head
 @onready var interact_ray: RayCast3D = $Head/InteractRay
 
+@onready var agent_controller: AIController3D = $AIController3D
+var sync_node: Sync
+
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 var use_agent_control: bool = false
@@ -49,6 +52,10 @@ var looked_tags: Array[String] = []
 
 
 func _ready() -> void:
+	sync_node = get_node_or_null("/root/PcgWorld/Sync")
+	if not sync_node:
+		push_warning("Sync node not found - training toggle disabled")
+	
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 	if interact_ray:
@@ -70,6 +77,16 @@ func _input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if sync_node and sync_node.control_mode == Sync.ControlModes.TRAINING:
+		if Input.is_action_just_pressed("toggle_control"):
+			if agent_controller.heuristic == "human":
+				agent_controller.heuristic = "model"
+			else:
+				agent_controller.heuristic = "human"
+
+	use_agent_control = agent_controller.heuristic != "human"
+	set_agent_action(agent_controller.input_actions)
+	
 	_update_looked_object()
 
 	if game_state != GameState.PLAYING:
@@ -92,8 +109,8 @@ func _read_human_action() -> Dictionary:
 	var move_input := Input.get_vector(
 		"move_left",
 		"move_right",
-		"move_forward",
-		"move_back"
+		"move_up",
+		"move_down"
 	)
 
 	return {
@@ -107,12 +124,7 @@ func _read_human_action() -> Dictionary:
 
 
 func set_agent_action(action: Dictionary) -> void:
-	agent_action["move_x"] = clamp(float(action.get("move_x", 0.0)), -1.0, 1.0)
-	agent_action["move_z"] = clamp(float(action.get("move_z", 0.0)), -1.0, 1.0)
-	agent_action["jump"] = bool(action.get("jump", false))
-	agent_action["interact"] = bool(action.get("interact", false))
-	agent_action["look_yaw"] = clamp(float(action.get("look_yaw", 0.0)), -1.0, 1.0)
-	agent_action["look_pitch"] = clamp(float(action.get("look_pitch", 0.0)), -1.0, 1.0)
+	agent_action = action
 
 
 func _apply_look_action(action: Dictionary) -> void:
@@ -285,7 +297,7 @@ func _try_interact() -> void:
 		_get_rl_tags_from_hierarchy(interactable)
 	)
 
-	interactable.interact(self)
+	interactable.interact(self )
 
 
 func _find_interactable(start_node: Node) -> Node:

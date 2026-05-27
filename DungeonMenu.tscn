@@ -1,0 +1,98 @@
+[gd_scene load_steps=2 format=3 uid="uid://shgunaw23nkw"]
+
+[ext_resource type="Script" uid="uid://2ut0d3xhbvf8" path="res://DungeonMenu.gd" id="1_wx6th"]
+
+[node name="Node2D" type="Node2D"]
+script = ExtResource("1_wx6th")
+
+[node name="Generate" type="MenuButton" parent="."]
+offset_left = 13.0
+offset_top = 36.0
+offset_right = 255.0
+offset_bottom = 84.0
+toggle_mode = false
+text = "Generate Dungeon"
+flat = false
+
+[node name="Seed" type="SpinBox" parent="."]
+offset_left = 106.0
+offset_top = 3.0
+offset_right = 255.0
+offset_bottom = 34.0
+allow_greater = true
+
+[node name="SeedLabel" type="Label" parent="."]
+offset_left = 17.0
+offset_top = 7.0
+offset_right = 106.0
+offset_bottom = 31.0
+text = "Input Seed:"
+
+[node name="MaxGenAttempts" type="SpinBox" parent="."]
+offset_left = 522.0
+offset_top = 7.0
+offset_right = 671.0
+offset_bottom = 38.0
+min_value = 1.0
+value = 20.0
+allow_greater = true
+
+[node name="MaxGenAttemptsLabel" type="Label" parent="."]
+offset_left = 316.0
+offset_top = 13.0
+offset_right = 521.0
+offset_bottom = 37.0
+text = "Max Generation Attempts:"
+
+[node name="NumChallenges" type="SpinBox" parent="."]
+offset_left = 522.0
+offset_top = 41.0
+offset_right = 671.0
+offset_bottom = 72.0
+allow_greater = true
+
+[node name="NumChallengesLabel" type="Label" parent="."]
+offset_left = 397.0
+offset_top = 46.0
+offset_right = 520.0
+offset_bottom = 70.0
+text = "# of Challenges:"
+
+[node name="CreateLoop" type="CheckButton" parent="."]
+offset_left = 17.0
+offset_top = 231.0
+offset_right = 243.0
+offset_bottom = 262.0
+button_pressed = true
+text = "Return Loop from Boss"
+
+[node name="RoomLibrary" type="ItemList" parent="."]
+offset_left = 841.0
+offset_top = 23.0
+offset_right = 1141.0
+offset_bottom = 642.0
+select_mode = 1
+allow_reselect = true
+
+[node name="ConfigJson" type="TextEdit" parent="."]
+offset_left = 13.0
+offset_top = 291.0
+offset_right = 672.0
+offset_bottom = 641.0
+placeholder_text = "Click Generate Dungeon to create editable dungeon JSON."
+
+[node name="BuildDungeon" type="Button" parent="."]
+offset_left = 11.0
+offset_top = 108.0
+offset_right = 187.0
+offset_bottom = 156.0
+text = "Build Dungeon"
+
+[node name="Quit" type="MenuButton" parent="."]
+offset_left = 749.0
+offset_top = 23.0
+offset_right = 827.0
+offset_bottom = 58.0
+toggle_mode = false
+text = "Quit"
+flat = false

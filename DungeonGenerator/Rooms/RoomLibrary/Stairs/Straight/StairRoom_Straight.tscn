@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://c1kc8j6wdt8oo"]
+[gd_scene format=3 uid="uid://c1kc8j6wdt8oo"]
 
 [ext_resource type="Script" uid="uid://d64s5r4uia0i" path="res://DungeonGenerator/Rooms/RoomLibrary/Stairs/Straight/StairRoomStraight.gd" id="1_voa8v"]
 [ext_resource type="PackedScene" uid="uid://c3vqd3lybvf5" path="res://DungeonGenerator/Rooms/RoomBaseObjects/Scenes/BoundingBox.tscn" id="2_c8f7d"]
@@ -7,17 +7,18 @@
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_c8f7d"]
 albedo_color = Color(0.7235539, 0.48163372, 1.92523e-07, 1)
 
-[node name="StairRoomStraight" type="Node3D"]
+[node name="StairRoomStraight" type="Node3D" unique_id=246781989]
 script = ExtResource("1_voa8v")
 
-[node name="Area3D" parent="." instance=ExtResource("2_c8f7d")]
+[node name="Area3D" parent="." unique_id=889857163 instance=ExtResource("2_c8f7d")]
 
-[node name="Target" parent="." instance=ExtResource("3_30hj7")]
+[node name="Target" parent="." unique_id=1827615970 instance=ExtResource("3_30hj7")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 0)
 
-[node name="Target2" parent="." instance=ExtResource("3_30hj7")]
+[node name="Target2" parent="." unique_id=471117046 instance=ExtResource("3_30hj7")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 0)
 
-[node name="CSGPolygon3D" type="CSGPolygon3D" parent="."]
+[node name="CSGPolygon3D" type="CSGPolygon3D" parent="." unique_id=1010370340]
 material_override = SubResource("StandardMaterial3D_c8f7d")
+use_collision = true
 polygon = PackedVector2Array(-1.5, 0, -1.5, 3.5, 1.5, 3.5, 1.5, 0)
