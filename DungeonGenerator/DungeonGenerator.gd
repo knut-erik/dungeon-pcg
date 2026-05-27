@@ -18,6 +18,10 @@ const COMPONENT_DESCRIPTORS_KEY := "dungeon_components"
 
 const COMPONENT_SCENE_REGISTRY := {
 	"key_pickup": preload("res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/Scenes/KeyPickup.tscn"),
+<<<<<<< Updated upstream
+=======
+	"coin": preload("res://DungeonGenerator/Rooms/RoomObjects/Coin/Coin.tscn"),
+>>>>>>> Stashed changes
 	"lever": preload("res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/Scenes/Lever.tscn"),
 	"lock_trigger_area": preload("res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/Scenes/LockTriggerArea.tscn"),
 	"hinge_door": preload("res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/Scenes/HingeDoor.tscn"),
@@ -558,6 +562,97 @@ func _validate_logical_graph(graph: LogicalGraph) -> bool:
 		if edge.edge_type == "locked" and not edge.requirements.has("key_id"):
 			push_warning("DungeonGenerator: Locked edge '%s' has no key_id yet." % edge.id)
 
+<<<<<<< Updated upstream
+=======
+	if not _validate_lock_blocks_boss(graph):
+		ok = false
+
+	if not _validate_loop_return_blockers(graph):
+		ok = false
+
+	return ok
+
+
+func _validate_lock_blocks_boss(graph: LogicalGraph) -> bool:
+	var has_locked_edge := false
+	for edge in graph.edges:
+		if edge != null and edge.edge_type == "locked":
+			has_locked_edge = true
+			break
+
+	if not has_locked_edge:
+		return true
+
+	var start_node := _find_first_node_with_tag(graph, "Entrance")
+	if start_node == null and not graph.nodes.is_empty():
+		start_node = graph.nodes[0]
+
+	if start_node == null:
+		return true
+
+	var queue: Array[LogicalNode] = [start_node]
+	var visited := { start_node: true }
+
+	while not queue.is_empty():
+		var node: LogicalNode = queue.pop_front()
+		if node.assigned_tags.has("Boss"):
+			push_warning("DungeonGenerator: Boss is reachable before crossing a locked edge. Rejecting graph.")
+			return false
+
+		for edge in node.out_edges:
+			if edge == null:
+				continue
+
+			if edge.edge_type == "locked":
+				continue
+
+			if edge.edge_type == "boss_return" or edge.tags.has("loop"):
+				continue
+
+			var next_node := edge.to_node
+			if next_node == null or visited.has(next_node):
+				continue
+
+			visited[next_node] = true
+			queue.append(next_node)
+
+	return true
+
+
+func _validate_loop_return_blockers(graph: LogicalGraph) -> bool:
+	var ok := true
+
+	for edge in graph.edges:
+		if edge == null:
+			continue
+
+		if edge.edge_type != "boss_return" and not edge.tags.has("loop"):
+			continue
+
+		var has_false_door := false
+		var has_boss_trigger := false
+
+		for descriptor in _get_component_descriptors(edge.custom_data):
+			if not descriptor is Dictionary:
+				continue
+
+			var component_type := str((descriptor as Dictionary).get("component_type", ""))
+			var edge_side := str((descriptor as Dictionary).get("edge_side", ""))
+
+			if component_type == "false_door" and edge_side == "to":
+				has_false_door = true
+
+			if component_type == "lock_trigger" and edge_side == "from":
+				has_boss_trigger = true
+
+		if not has_false_door or not has_boss_trigger:
+			push_warning(
+				"DungeonGenerator: boss return edge %s is missing its entrance false door or boss-side trigger."
+				% edge.id
+			)
+			ok = false
+
+>>>>>>> Stashed changes
 	return ok
 
 func _spawn_graph_components(graph: LogicalGraph) -> void:
@@ -684,6 +779,17 @@ func _spawn_component_from_descriptor(
 	component.transform = Transform3D.IDENTITY
 	socket.add_child(component)
 
+<<<<<<< Updated upstream
+=======
+	if component_type == "false_door":
+		_align_component_to_claimed_gateway(
+			component,
+			room_instance,
+			logical_edge,
+			gateway_role
+		)
+
+>>>>>>> Stashed changes
 	if verbose_generation_logs:
 		print(
 			"DungeonGenerator: spawned component_id=", component_id,
@@ -713,6 +819,56 @@ func _get_component_scene(scene_key: String) -> PackedScene:
 	return COMPONENT_SCENE_REGISTRY.get(scene_key, null)
 
 
+<<<<<<< Updated upstream
+=======
+func _align_component_to_claimed_gateway(
+	component: Node3D,
+	room_instance: Node3D,
+	logical_edge: LogicalEdge,
+	gateway_role: String = ""
+) -> void:
+	if component == null or logical_edge == null:
+		return
+
+	if not room_instance is BaseRoom:
+		return
+
+	var gateway := _find_claimed_gateway_for_edge(
+		room_instance as BaseRoom,
+		logical_edge,
+		gateway_role
+	)
+
+	if gateway == null:
+		return
+
+	component.global_transform = gateway.global_transform
+
+
+func _find_claimed_gateway_for_edge(
+	room_instance: BaseRoom,
+	logical_edge: LogicalEdge,
+	gateway_role: String = ""
+) -> Gateway:
+	var fallback: Gateway = null
+
+	for gateway in room_instance.get_gateways():
+		if gateway == null:
+			continue
+
+		if not gateway.connected_edges.has(logical_edge):
+			continue
+
+		if gateway_role.is_empty() or gateway.role == gateway_role:
+			return gateway
+
+		if fallback == null:
+			fallback = gateway
+
+	return fallback
+
+
+>>>>>>> Stashed changes
 func _find_component_socket(
 	root: Node,
 	socket_role: String,

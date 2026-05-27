@@ -100,9 +100,15 @@ func _build_world_from_config(config: Dictionary) -> void:
 
 
 func _create_config_dictionary() -> Dictionary:
+<<<<<<< Updated upstream
 	var seed: int = int(_seed_input.value)
 	if seed == 0:
 		seed = Time.get_ticks_usec()
+=======
+	var config_seed: int = int(_seed_input.value)
+	if config_seed == 0:
+		config_seed = Time.get_ticks_usec()
+>>>>>>> Stashed changes
 
 	var max_attempts: int = maxi(1, int(_max_attempts_input.value))
 	var challenge_count: int = maxi(0, int(_num_challenges_input.value))
@@ -113,7 +119,11 @@ func _create_config_dictionary() -> Dictionary:
 			selected_blueprints.append(blueprint)
 
 	var rng := RandomNumberGenerator.new()
+<<<<<<< Updated upstream
 	rng.seed = seed
+=======
+	rng.seed = config_seed
+>>>>>>> Stashed changes
 
 	var rewriter := GraphRewriter.new(selected_blueprints, challenge_count, create_loop, rng, false)
 	var graph: LogicalGraph = rewriter.generate()
@@ -121,7 +131,11 @@ func _create_config_dictionary() -> Dictionary:
 	return {
 		"version": 1,
 		"generator": {
+<<<<<<< Updated upstream
 			"seed": seed,
+=======
+			"seed": config_seed,
+>>>>>>> Stashed changes
 			"max_generation_attempts": max_attempts,
 			"num_challenges": challenge_count,
 			"create_loop": create_loop

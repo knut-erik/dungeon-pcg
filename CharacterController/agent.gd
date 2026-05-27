@@ -17,8 +17,13 @@ enum GameState {
 @export var mouse_sensitivity: float = 0.0025
 
 @export_category("Stats")
+<<<<<<< Updated upstream
 @export var max_health: int = 100
 @export var health: int = 100
+=======
+@export var max_health: int = 8
+@export var health: int = 8
+>>>>>>> Stashed changes
 @export var money: int = 0
 @export var game_state: GameState = GameState.PLAYING
 
@@ -60,6 +65,11 @@ func _ready() -> void:
 
 	if interact_ray:
 		interact_ray.enabled = true
+<<<<<<< Updated upstream
+=======
+		interact_ray.collide_with_areas = true
+		interact_ray.collide_with_bodies = true
+>>>>>>> Stashed changes
 		interact_ray.target_position = Vector3(0.0, 0.0, -interact_distance)
 
 
@@ -180,13 +190,32 @@ func _update_looked_object() -> void:
 
 	interact_ray.force_raycast_update()
 
+<<<<<<< Updated upstream
+=======
+	var enemy_area: Node = _find_enemy_area_on_interact_ray()
+	if enemy_area != null:
+		looked_object = enemy_area
+		looked_tags = _get_rl_tags_from_hierarchy(enemy_area)
+		return
+
+	var nearby_enemy: Node = _find_nearby_enemy_in_view()
+	if nearby_enemy != null:
+		looked_object = nearby_enemy
+		looked_tags = _get_rl_tags_from_hierarchy(nearby_enemy)
+		return
+
+>>>>>>> Stashed changes
 	if not interact_ray.is_colliding():
 		return
 
 	var collider := interact_ray.get_collider()
 
 	if collider is Node:
+<<<<<<< Updated upstream
 		var node := collider as Node
+=======
+		var node: Node = collider as Node
+>>>>>>> Stashed changes
 		looked_object = _find_agent_object(node)
 		looked_tags = _get_rl_tags_from_hierarchy(node)
 
@@ -197,6 +226,7 @@ func _update_looked_object() -> void:
 				if object_changed or tags_changed:
 					_last_debug_looked_object = looked_object
 					_last_debug_looked_tags = looked_tags.duplicate()
+<<<<<<< Updated upstream
 
 					print(
 						"Player raycast hit: ",
@@ -207,6 +237,21 @@ func _update_looked_object() -> void:
 						str(looked_object.get_meta("component_type", "")) if looked_object else "",
 						" lock_id=",
 						str(looked_object.get_meta("lock_id", "")) if looked_object else ""
+=======
+					var looked_name: String = str(looked_object.name) if looked_object != null else "null"
+					var looked_component_type: String = str(looked_object.get_meta("component_type", "")) if looked_object != null else ""
+					var looked_lock_id: String = str(looked_object.get_meta("lock_id", "")) if looked_object != null else ""
+
+					print(
+						"Player raycast hit: ",
+						looked_name,
+						" tags=",
+						looked_tags,
+						" component_type=",
+						looked_component_type,
+						" lock_id=",
+						looked_lock_id
+>>>>>>> Stashed changes
 					)
 
 
@@ -231,6 +276,85 @@ func _find_agent_object(start_node: Node) -> Node:
 	return start_node
 
 
+<<<<<<< Updated upstream
+=======
+func _find_enemy_area_on_interact_ray() -> Node:
+	var camera: Camera3D = _get_interaction_camera()
+	if camera == null:
+		return null
+
+	var ray_origin: Vector3 = camera.global_position
+	var ray_direction: Vector3 = -camera.global_transform.basis.z.normalized()
+	var ray_end: Vector3 = ray_origin + ray_direction * interact_distance
+
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(ray_origin, ray_end)
+	query.collide_with_areas = true
+	query.collide_with_bodies = false
+	query.collision_mask = 0xFFFFFFFF
+	query.hit_from_inside = true
+
+	var hit: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return null
+
+	var collider_variant: Variant = hit.get("collider")
+	if not collider_variant is Node:
+		return null
+
+	var collider: Node = collider_variant as Node
+	var interactable: Node = _find_interactable(collider)
+	if interactable == null:
+		return null
+
+	var tags: Array[String] = _get_rl_tags_from_hierarchy(interactable)
+	if tags.has("enemy"):
+		return interactable
+
+	return null
+
+
+func _find_nearby_enemy_in_view() -> Node:
+	var camera: Camera3D = _get_interaction_camera()
+	if camera == null:
+		return null
+
+	var best_enemy: Node = null
+	var best_score: float = INF
+	var camera_pos: Vector3 = camera.global_position
+	var camera_forward: Vector3 = -camera.global_transform.basis.z.normalized()
+
+	for enemy: Node in get_tree().get_nodes_in_group("enemy"):
+		if not enemy is Node3D:
+			continue
+
+		var enemy_node: Node3D = enemy as Node3D
+		var to_enemy: Vector3 = enemy_node.global_position - camera_pos
+		var distance: float = to_enemy.length()
+		if distance > interact_distance:
+			continue
+
+		var direction: Vector3 = to_enemy.normalized()
+		var aim_dot: float = camera_forward.dot(direction)
+		if aim_dot < 0.965:
+			continue
+
+		var score: float = distance + (1.0 - aim_dot) * 10.0
+		if score < best_score:
+			best_score = score
+			best_enemy = enemy_node
+
+	return best_enemy
+
+
+func _get_interaction_camera() -> Camera3D:
+	var head_camera: Camera3D = get_node_or_null("Head/Camera3D") as Camera3D
+	if head_camera != null:
+		return head_camera
+
+	return get_viewport().get_camera_3d()
+
+
+>>>>>>> Stashed changes
 func _get_rl_tags_from_hierarchy(start_node: Node) -> Array[String]:
 	var tags: Array[String] = []
 	var node: Node = start_node
@@ -300,6 +424,15 @@ func _try_interact() -> void:
 	interactable.interact(self )
 
 
+<<<<<<< Updated upstream
+=======
+func swing_sword() -> void:
+	var sword: Node = get_node_or_null("Head/Sword")
+	if sword != null and sword.has_method("swing"):
+		sword.swing()
+
+
+>>>>>>> Stashed changes
 func _find_interactable(start_node: Node) -> Node:
 	var node: Node = start_node
 

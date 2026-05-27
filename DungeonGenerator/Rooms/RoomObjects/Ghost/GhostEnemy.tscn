@@ -1,0 +1,25 @@
+[gd_scene load_steps=5 format=3 uid="uid://bgylwcmnatjf"]
+
+[ext_resource type="Script" uid="uid://iyh34kegvjrs" path="res://DungeonGenerator/Rooms/RoomObjects/Ghost/GhostEnemy.gd" id="1_ghost_script"]
+[ext_resource type="PackedScene" uid="uid://cl8b72ogcswxk" path="res://Assets/Mesh/Enemies/Ghost_export.glb" id="2_ghost_mesh"]
+[ext_resource type="Script" uid="uid://dkbwb0egr6ebm" path="res://DungeonGenerator/Rooms/RoomObjects/Ghost/GhostHitbox.gd" id="3_hitbox_script"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_ghost"]
+radius = 1.6
+height = 4.8
+
+[node name="GhostEnemy" type="Node3D"]
+script = ExtResource("1_ghost_script")
+
+[node name="Visual" type="Node3D" parent="."]
+transform = Transform3D(0.65, 0, 0, 0, 0.65, 0, 0, 0, 0.65, 0, 0.55, 0)
+
+[node name="Ghost_export" parent="Visual" instance=ExtResource("2_ghost_mesh")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2.0237236, 0)
+
+[node name="StaticBody3D" type="Area3D" parent="."]
+script = ExtResource("3_hitbox_script")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8685992, 0)
+shape = SubResource("CapsuleShape3D_ghost")
