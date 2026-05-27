@@ -1,4 +1,8 @@
+<<<<<<< Updated upstream
 [gd_scene load_steps=15 format=3 uid="uid://bubmd1fjgr1si"]
+=======
+[gd_scene load_steps=16 format=3 uid="uid://bubmd1fjgr1si"]
+>>>>>>> Stashed changes
 
 [ext_resource type="Script" uid="uid://dmcyykdbonpjk" path="res://DungeonGenerator/DungeonGenerator.gd" id="1_nulmw"]
 [ext_resource type="Script" uid="uid://djoai4k68rbwe" path="res://DungeonGenerator/Rooms/RoomComponents/RoomBlueprint.gd" id="2_6h3ij"]
@@ -12,6 +16,10 @@
 [ext_resource type="Resource" uid="uid://dsk2b7ex0umf0" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/Blueprints/Blueprint_DefaultRoom_Key.tres" id="9_gefqj"]
 [ext_resource type="Script" uid="uid://cyvlhdugha7mg" path="res://DungeonGenerator/DungeonDebugDraw.gd" id="10_8mbj2"]
 [ext_resource type="Resource" uid="uid://baadv2ce1qh3g" path="res://DungeonGenerator/Rooms/RoomLibrary/BaseRoom/Blueprints/Blueprint_DefaultRoom_Lock.tres" id="10_pt085"]
+<<<<<<< Updated upstream
+=======
+[ext_resource type="PackedScene" path="res://DungeonGenerator/PixelPostProcess.tscn" id="11_pixel"]
+>>>>>>> Stashed changes
 
 [sub_resource type="Sky" id="Sky_slqep"]
 
@@ -32,3 +40,11 @@ environment = SubResource("Environment_gaxvh")
 
 [node name="Debug" type="Node3D" parent="."]
 script = ExtResource("10_8mbj2")
+<<<<<<< Updated upstream
+=======
+
+[node name="PixelPostProcess" parent="." instance=ExtResource("11_pixel")]
+pixel_size = 3.0
+color_steps = 10.0
+dither_strength = 0.05
+>>>>>>> Stashed changes

@@ -1,0 +1,31 @@
+[gd_scene load_steps=5 format=3 uid="uid://bqpd0j6kgtycd"]
+
+[ext_resource type="Script" uid="uid://c0ax3k6skd25o" path="res://DungeonGenerator/Rooms/RoomObjects/Coin/CoinPickup.gd" id="1_coin_script"]
+[ext_resource type="PackedScene" uid="uid://cvr0b17l0w0tv" path="res://Assets/Mesh/Gameplay/EAcoin.glb" id="2_coin_mesh"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_coin_pickup"]
+radius = 0.65
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_coin_raycast"]
+radius = 0.45
+
+[node name="Coin" type="Node3D"]
+script = ExtResource("1_coin_script")
+
+[node name="CoinVisual" type="Node3D" parent="."]
+
+[node name="EAcoin" parent="CoinVisual" instance=ExtResource("2_coin_mesh")]
+transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0.3, 0)
+
+[node name="PickupArea" type="Area3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PickupArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+shape = SubResource("SphereShape3D_coin_pickup")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
+editor_description = "Used for raycast"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+shape = SubResource("SphereShape3D_coin_raycast")

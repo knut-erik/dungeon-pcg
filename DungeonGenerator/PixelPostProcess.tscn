@@ -1,0 +1,31 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://DungeonGenerator/PixelPostProcess.gd" id="1_script"]
+[ext_resource type="Shader" path="res://DungeonGenerator/T3sselPixelPostProcess.gdshader" id="2_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_pixel_post"]
+shader = ExtResource("2_shader")
+shader_parameter/effect_enabled = true
+shader_parameter/mix_amount = 1.0
+shader_parameter/pixel_size = 2.0
+shader_parameter/color_steps = 7.0
+shader_parameter/dither_strength = 0.0
+shader_parameter/edge_strength = 0.18
+shader_parameter/saturation = 0.9
+shader_parameter/contrast = 1.08
+shader_parameter/shadow_tint = Color(0.05, 0.08, 0.12, 1)
+shader_parameter/highlight_tint = Color(0.86, 0.95, 1, 1)
+shader_parameter/tint_strength = 0.16
+
+[node name="PixelPostProcess" type="CanvasLayer"]
+layer = 128
+script = ExtResource("1_script")
+
+[node name="Overlay" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+material = SubResource("ShaderMaterial_pixel_post")
