@@ -3,10 +3,7 @@ extends RefCounted
 class_name GraphRewriter
 
 const ROUTING_ZONE_KEY := "routing_zone"
-<<<<<<< Updated upstream
-=======
 const BOSS_RETURN_ROUTING_ZONE := "boss_return"
->>>>>>> Stashed changes
 
 var room_library: Array[RoomBlueprint]
 var num_challenges: int = 3
@@ -316,11 +313,7 @@ func _annotate_routing_zones(graph: LogicalGraph, start_node: LogicalNode) -> vo
 			continue
 
 		if edge.edge_type == "boss_return" or edge.tags.has("loop"):
-<<<<<<< Updated upstream
-			edge.custom_data[ROUTING_ZONE_KEY] = "post_lock"
-=======
 			edge.custom_data[ROUTING_ZONE_KEY] = BOSS_RETURN_ROUTING_ZONE
->>>>>>> Stashed changes
 			continue
 
 		if edge.edge_type == "locked":
