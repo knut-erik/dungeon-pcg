@@ -1,0 +1,26 @@
+[gd_scene load_steps=4 format=3 uid="uid://cvx21cm3tbwsk"]
+
+[ext_resource type="Script" uid="uid://cv5fen1f3w3jj" path="res://DungeonGenerator/Rooms/RoomLibrary/DartRoom/dart_trap.gd" id="1_ugrae"]
+[ext_resource type="PackedScene" uid="uid://be58j7v6qnwi" path="res://DungeonGenerator/Rooms/RoomLibrary/DartRoom/Dart.tscn" id="2_2ttck"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2ttck"]
+albedo_color = Color(1, 0, 0, 1)
+
+[node name="DartTrap" type="Node3D"]
+script = ExtResource("1_ugrae")
+dart_scene = ExtResource("2_2ttck")
+
+[node name="Shooter" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.10000001, 0, 0)
+size = Vector3(0.2, 0.2, 0.2)
+material = SubResource("StandardMaterial3D_2ttck")
+
+[node name="Plate" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.05, 0, 0)
+size = Vector3(0.1, 0.5, 0.5)
+
+[node name="Timer" type="Timer" parent="."]
+wait_time = 1.5
+autostart = true
+
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

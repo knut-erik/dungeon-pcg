@@ -12,7 +12,7 @@ class_name DungeonGenerator
 var generation_config: Dictionary = {}
 
 # The grid size should ~match CorridorNetwork.GRID_SIZE
-const GRID_SIZE := 1.0 
+const GRID_SIZE := 1.0
 
 const COMPONENT_DESCRIPTORS_KEY := "dungeon_components"
 
@@ -177,7 +177,7 @@ func _build_physical_dungeon(graph: LogicalGraph, rng: RandomNumberGenerator) ->
 	room_map[start_logic] = start_room
 
 	var queue: Array[LogicalNode] = [start_logic]
-	var visited := { start_logic: true }
+	var visited := {start_logic: true}
 	
 	# 2. Place all other rooms
 	while not queue.is_empty():
@@ -426,7 +426,6 @@ func _place_room_corridor_friendly(
 		required_y: float,
 		edge: LogicalEdge
 	) -> bool:
-
 	var distance_steps: Array[float] = [18.0, 24.0, 30.0, 36.0, 44.0, 52.0]
 
 	if edge.edge_type == "boss_return" or edge.tags.has("loop"):
@@ -449,7 +448,6 @@ func _place_room_near_room(
 		required_y: float,
 		distance_steps: Array[float]
 	) -> bool:
-
 	var dirs: Array[Vector3] = [
 		Vector3.FORWARD,
 		Vector3.BACK,
@@ -486,7 +484,6 @@ func _place_room_fallback(
 		rng: RandomNumberGenerator,
 		required_y: float
 	) -> void:
-
 	var test_radius: float = 20.0
 	var child_aabbs := child_room.get_world_aabbs()
 

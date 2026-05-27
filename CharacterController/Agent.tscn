@@ -1,8 +1,3 @@
-<<<<<<< Updated upstream
-[gd_scene load_steps=3 format=3 uid="uid://d2mie43rxrka6"]
-
-[ext_resource type="Script" uid="uid://denrm3efkg4d6" path="res://CharacterController/agent.gd" id="1_kouoa"]
-=======
 [gd_scene load_steps=8 format=3 uid="uid://d2mie43rxrka6"]
 
 [ext_resource type="Script" uid="uid://denrm3efkg4d6" path="res://CharacterController/agent.gd" id="1_kouoa"]
@@ -11,9 +6,16 @@
 [ext_resource type="Texture2D" uid="uid://b02ghbm6duue4" path="res://Assets/PlayerIcons/HeartIco.png" id="4_heart"]
 [ext_resource type="Texture2D" uid="uid://bgb2yoms7bl4m" path="res://Assets/PlayerIcons/CoinIco.png" id="5_coin"]
 [ext_resource type="Script" uid="uid://dqelt3q8xb5nf" path="res://CharacterController/FirstPersonViewModel.gd" id="6_viewmodel"]
->>>>>>> Stashed changes
+[gd_scene load_steps=5 format=3 uid="uid://d2mie43rxrka6"]
+
+[ext_resource type="Script" uid="uid://denrm3efkg4d6" path="res://CharacterController/agent.gd" id="1_kouoa"]
+[ext_resource type="Script" uid="uid://chpvvrrjecl0e" path="res://CharacterController/ai_controller.gd" id="2_pd0mg"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_kouoa"]
+radius = 0.2
+height = 1.7
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_pd0mg"]
 radius = 0.2
 height = 1.7
 
@@ -32,9 +34,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5495038, 0)
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
 target_position = Vector3(0, -1.5, 0)
 
-<<<<<<< Updated upstream
-[node name="StatDisplay" type="SubViewport" parent="."]
-=======
 [node name="Sword" parent="Head" instance=ExtResource("2_pd0mg")]
 transform = Transform3D(0.9781476, 0, 0.2079117, 0, 1, 0, -0.2079117, 0, 0.9781476, 0.55, -0.48, -0.789)
 script = ExtResource("6_viewmodel")
@@ -45,4 +44,10 @@ script = ExtResource("6_viewmodel")
 script = ExtResource("3_hud")
 heart_texture = ExtResource("4_heart")
 coin_texture = ExtResource("5_coin")
->>>>>>> Stashed changes
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("CapsuleMesh_pd0mg")
+
+[node name="AIController3D" type="Node3D" parent="."]
+script = ExtResource("2_pd0mg")
+metadata/_custom_type_script = "uid://dcpjaks5n7uor"

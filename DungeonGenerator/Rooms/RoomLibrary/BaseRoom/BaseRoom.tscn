@@ -32,7 +32,7 @@ operation = 2
 size = Vector3(0.5, 2.1, 1)
 
 [node name="Target" parent="CSGCombiner3D/CSGBox3D2" instance=ExtResource("2_vsc08")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.2, 0)
 
 [node name="CSGBox3D3" type="CSGBox3D" parent="CSGCombiner3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 1.1, 0)

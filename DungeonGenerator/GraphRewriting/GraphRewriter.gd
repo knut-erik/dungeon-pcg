@@ -45,7 +45,7 @@ func generate() -> LogicalGraph:
 	var challenge_rule := Rule_InsertChallenge.new(room_library, rng, verbose_logs)
 	var applied := 0
 	var attempts := 0
-	var max_attempts : int = max(20, num_challenges * 20)
+	var max_attempts: int = max(20, num_challenges * 20)
 
 	while applied < num_challenges and attempts < max_attempts:
 		attempts += 1

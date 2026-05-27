@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="RoomBlueprint" load_steps=5 format=3 uid="uid://g7b1rb0hhrga"]
+
+[ext_resource type="Resource" uid="uid://6png6l32py8g" path="res://DungeonGenerator/Rooms/RoomLibrary/LeverRoom/param_lever_posz.tres" id="1_amllr"]
+[ext_resource type="Script" uid="uid://djoai4k68rbwe" path="res://DungeonGenerator/Rooms/RoomComponents/RoomBlueprint.gd" id="1_oug00"]
+[ext_resource type="PackedScene" uid="uid://dg7stxculdrak" path="res://DungeonGenerator/Rooms/RoomLibrary/LeverRoom/LeverRoom.tscn" id="1_s6elj"]
+[ext_resource type="Resource" uid="uid://b68d0sabnla5r" path="res://DungeonGenerator/Rooms/RoomLibrary/LeverRoom/param_lever_posx.tres" id="4_n1sou"]
+
+[resource]
+script = ExtResource("1_oug00")
+room_scene = ExtResource("1_s6elj")
+possible_tags = Array[String](["Alive"])
+width_param = ExtResource("4_n1sou")
+length_param = ExtResource("1_amllr")
+metadata/_custom_type_script = "uid://djoai4k68rbwe"
