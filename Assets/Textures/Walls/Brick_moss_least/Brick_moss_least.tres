@@ -1,12 +1,14 @@
-[gd_resource type="StandardMaterial3D" load_steps=6 format=3 uid="uid://dd0ngxr4ee417"]
+[gd_resource type="StandardMaterial3D" load_steps=7 format=3 uid="uid://dd0ngxr4ee417"]
 
 [ext_resource type="Texture2D" uid="uid://bua2r458r3xy5" path="res://Assets/Textures/Walls/Brick_moss_least/PavingStones086_240p_Color.png" id="1_wc2jx"]
 [ext_resource type="Texture2D" uid="uid://cq1fne00g5vjv" path="res://Assets/Textures/Walls/Brick_moss_least/PavingStones086_240p_AmbientOcclusion.png" id="2_344e3"]
 [ext_resource type="Texture2D" uid="uid://b1rd2ulsk6cjt" path="res://Assets/Textures/Walls/Brick_moss_least/PavingStones086_240p_Displacement.png" id="3_mxxg0"]
 [ext_resource type="Texture2D" uid="uid://cny3pkux32htw" path="res://Assets/Textures/Walls/Brick_moss_least/PavingStones086_240p_NormalGL.png" id="4_8cqos"]
+[ext_resource type="Material" uid="uid://cebrea44b7xap" path="res://Assets/Textures/Rocks/Rock1/Rock1.tres" id="4_344e3"]
 [ext_resource type="Texture2D" uid="uid://uddtuww602am" path="res://Assets/Textures/Walls/Brick_moss_least/PavingStones086_240p_Roughness.png" id="5_7tlel"]
 
 [resource]
+next_pass = ExtResource("4_344e3")
 albedo_texture = ExtResource("1_wc2jx")
 roughness_texture = ExtResource("5_7tlel")
 normal_enabled = true

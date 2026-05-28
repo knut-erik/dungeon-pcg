@@ -1,16 +1,14 @@
 [gd_scene load_steps=4 format=3 uid="uid://be58j7v6qnwi"]
 
 [ext_resource type="Script" uid="uid://c80xiyuct4ngs" path="res://DungeonGenerator/Rooms/RoomLibrary/DartRoom/dart.gd" id="1_lxhql"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_j35bt"]
-albedo_color = Color(1, 0, 0, 1)
+[ext_resource type="Material" uid="uid://1s7tcdu4ad7w" path="res://Assets/Textures/Rocks/Rock2/Rock2.tres" id="1_sv78o"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_7e17a"]
 size = Vector3(0.2, 0.1, 0.1)
 
 [node name="Dart" type="CSGBox3D"]
 size = Vector3(0.2, 0.1, 0.1)
-material = SubResource("StandardMaterial3D_j35bt")
+material = ExtResource("1_sv78o")
 script = ExtResource("1_lxhql")
 
 [node name="HitBox" type="Area3D" parent="."]

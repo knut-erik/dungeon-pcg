@@ -6,6 +6,7 @@ const GHOST_ENEMY_SCENE: PackedScene = preload("res://DungeonGenerator/Rooms/Roo
 
 # Hämta referenser baserat på din Scen-struktur
 @onready var bounding_box = $Area3D 
+@onready var CSG_Combiner: CSGCombiner3D = $CSGCombiner3D
 @onready var main_room = $CSGCombiner3D/CSGBox3D
 @onready var hollowing_room = $CSGCombiner3D/CSGBox3D4
 @onready var door_hole_in = $CSGCombiner3D/CSGBox3D3
@@ -15,6 +16,9 @@ func _ready() -> void:
 	# Berätta för bas-klassen vilka noder som är våra gateways
 	gateway_in = $CSGCombiner3D/CSGBox3D2/Target
 	gateway_out = $CSGCombiner3D/CSGBox3D3/Target2
+	
+	var mat: StandardMaterial3D = load("res://Assets/Textures/Floors/Stone_floors/cobblestone3/cobblestone3.tres")
+	CSG_Combiner.material_override = mat
 
 func setup_room(rng: RandomNumberGenerator, logic_node: LogicalNode):
 	# 1. Hämta datan

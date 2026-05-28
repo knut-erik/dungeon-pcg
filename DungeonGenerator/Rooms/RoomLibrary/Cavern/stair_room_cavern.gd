@@ -44,9 +44,9 @@ func setup_room(_rng: RandomNumberGenerator, logic_node: LogicalNode):
 		0.45
 	)
 
-	var material := StandardMaterial3D.new()
+	var material = load("res://Assets/Textures/Rocks/Rock2/Rock2.tres")
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	material.albedo_texture = load("res://Assets/Textures/grass.png")
+	#material.albedo_texture = load("res://Assets/Textures/grass.png")
 	cave.material_override = material
 	path.add_child(cave)
 	
@@ -239,7 +239,7 @@ func create_noisy_tube_mesh_along_path(
 
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-
+	
 	return mesh
 
 # Creates a random 3D path starting at start_position

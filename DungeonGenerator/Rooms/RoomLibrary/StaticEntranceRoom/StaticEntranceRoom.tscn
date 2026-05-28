@@ -1,6 +1,5 @@
 [gd_scene load_steps=8 format=3 uid="uid://clfudm1a34xra"]
 
-
 [ext_resource type="PackedScene" uid="uid://buhg1tfw82ury" path="res://DungeonGenerator/Rooms/RoomBaseObjects/Scenes/Gateway.tscn" id="1_60u6r"]
 [ext_resource type="Script" uid="uid://coghw0dhxb78" path="res://DungeonGenerator/Rooms/RoomLibrary/StaticEntranceRoom/StaticEntranceRoom.gd" id="1_lg3wq"]
 [ext_resource type="PackedScene" uid="uid://c3vqd3lybvf5" path="res://DungeonGenerator/Rooms/RoomBaseObjects/Scenes/BoundingBox.tscn" id="2_ki6tt"]

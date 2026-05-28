@@ -53,8 +53,6 @@ var looked_tags: Array[String] = []
 
 func _ready() -> void:
 	sync_node = get_node_or_null("/root/PcgWorld/Sync")
-	if not sync_node:
-		push_warning("Sync node not found - training toggle disabled")
 	
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 

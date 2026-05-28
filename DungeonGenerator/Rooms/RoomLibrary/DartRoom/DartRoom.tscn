@@ -1,19 +1,19 @@
 [gd_scene load_steps=6 format=3 uid="uid://c63j4krmi71jb"]
 
 [ext_resource type="Script" uid="uid://brbcrltmgtcwc" path="res://DungeonGenerator/Rooms/RoomLibrary/DartRoom/dart_room.gd" id="1_3yhkl"]
-[ext_resource type="PackedScene" uid="uid://c3vqd3lybvf5" path="res://DungeonGenerator/Rooms/RoomBaseObjects/BoundingBox.tscn" id="1_75i1g"]
-[ext_resource type="PackedScene" uid="uid://buhg1tfw82ury" path="res://DungeonGenerator/Rooms/RoomBaseObjects/Gateway.tscn" id="2_3yhkl"]
+[ext_resource type="PackedScene" uid="uid://c3vqd3lybvf5" path="res://DungeonGenerator/Rooms/RoomBaseObjects/Scenes/BoundingBox.tscn" id="1_75i1g"]
+[ext_resource type="PackedScene" uid="uid://buhg1tfw82ury" path="res://DungeonGenerator/Rooms/RoomBaseObjects/Scenes/Gateway.tscn" id="2_3yhkl"]
 [ext_resource type="PackedScene" uid="uid://cvx21cm3tbwsk" path="res://DungeonGenerator/Rooms/RoomLibrary/DartRoom/DartTrap.tscn" id="3_ubc14"]
-[ext_resource type="Material" uid="uid://cibcmc5ulitt7" path="res://Assets/Materials/stone_bricks.tres" id="4_ubc14"]
+[ext_resource type="Material" uid="uid://cyqmiike16ap1" path="res://Assets/Textures/Walls/Brick_moss_most/Brick_moss_most.tres" id="4_ubc14"]
 
 [node name="DartRoom" type="Node3D"]
 script = ExtResource("1_3yhkl")
 
 [node name="DartTrap2" parent="." instance=ExtResource("3_ubc14")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.9, 0.7, -1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8763082, 0.7, -1)
 
 [node name="DartTrap" parent="." instance=ExtResource("3_ubc14")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.9, 0.7, 1)
+transform = Transform3D(0.9929241, 0.118750565, 0, -0.118750565, 0.9929241, 0, 0, 0, 1, -2.9, 0.7, 1)
 
 [node name="BoundingBox" parent="." instance=ExtResource("1_75i1g")]
 

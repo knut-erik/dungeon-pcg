@@ -9,6 +9,8 @@ func _ready() -> void:
 	gateway_in = $CSGCombiner3D/CSGBox3D3/Target
 	gateway_out = $CSGCombiner3D/CSGBox3D7/Target2
 
+	$CSGCombiner3D.material_override = load("res://Assets/Textures/Floors/Stone_floors/cobblestone3/cobblestone3.tres")
+
 func setup_room(_rng: RandomNumberGenerator, _logic_node: LogicalNode) -> void:
 	gateway_in = $CSGCombiner3D/CSGBox3D3/Target
 	gateway_out = $CSGCombiner3D/CSGBox3D7/Target2

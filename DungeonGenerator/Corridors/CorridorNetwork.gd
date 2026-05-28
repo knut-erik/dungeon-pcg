@@ -70,7 +70,7 @@ func build(
 	# seal_unused_gateways() enables it once final corridor geometry is complete.
 	_csg_root.use_collision = false
 	
-	var mat := load("res://Assets/texture/pavingstones_moss_most/Pavingstones_moss_most.tres")
+	var mat := load("res://Assets/Textures/Floors/Stone_floors/cobblestone3/cobblestone3.tres")
 	
 	#var mat := StandardMaterial3D.new()
 	#mat.albedo_texture = load("res://Assets/texture/RockPillar/Color.png")
@@ -1100,7 +1100,6 @@ func _commit_polyline(polyline: PackedVector3Array, routing_zone: String = "") -
 		_pending_corridor_aabbs.append(aabb)
 		_pending_corridor_records.append({
 			"aabb": aabb,
-			"routing_zone": routing_zone
 			"routing_zone": routing_zone,
 			"owner_edge_id": _active_edge_id
 		})
@@ -1317,7 +1316,6 @@ func _corridor_zones_can_merge(zone_a: String, zone_b: String) -> bool:
 		normalized_b = "default"
 
 	return normalized_a == normalized_b
-
 
 
 func _clean_collinear(pts: PackedVector3Array) -> PackedVector3Array:
