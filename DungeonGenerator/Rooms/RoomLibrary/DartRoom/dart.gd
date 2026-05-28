@@ -12,5 +12,5 @@ func _process(delta: float) -> void:
 func _on_hit_box_body_entered(body: Node3D) -> void:
 	if body.is_in_group("character"):
 		body.velocity = Vector3.ZERO
-		body.global_position = respawn_point
+		body.damage(1)
 	queue_free()
