@@ -12,7 +12,7 @@ enum TerrainPreset {
 @export var seed: int = 1
 @export var path_length := 280.0
 @export_range(4.0, 48.0, 0.25) var route_width := 18.0
-@export_range(4.0, 48.0, 0.25) var wall_height := 42.0
+@export_range(32.0, 256.0, 0.25) var wall_height := 128.0
 @export_range(0, 12, 1) var branch_count := 5
 @export_range(0.0, 1.0, 0.01) var openness := 0.35
 @export_range(0.0, 1.0, 0.01) var noise_strength := 0.45
