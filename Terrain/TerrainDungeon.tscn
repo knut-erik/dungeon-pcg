@@ -1,8 +1,4 @@
-<<<<<<< Updated upstream
-[gd_scene load_steps=13 format=3 uid="uid://d1lgjlvvojgdb"]
-=======
 [gd_scene load_steps=14 format=3 uid="uid://d1lgjlvvojgdb"]
->>>>>>> Stashed changes
 
 [ext_resource type="PackedScene" uid="uid://c7kqgl1k10x14" path="res://addons/jar_voxel_terrain/src/chunk.tscn" id="1_7hprh"]
 [ext_resource type="Script" uid="uid://ex608u7ymxbk" path="res://camera_3d.gd" id="2_gtg1g"]
@@ -10,10 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://dnd15ybts1i7v" path="res://DungeonGenerator/Rooms/RoomBaseObjects/Scenes/SceneTransition.tscn" id="4_x3mof"]
 [ext_resource type="Script" uid="uid://ci3vu6rr1p766" path="res://Terrain/SDFBool.gd" id="5_sdfbool"]
 [ext_resource type="Script" uid="uid://bg4ffan2dxtib" path="res://Terrain/TerrainDungeonDirector.gd" id="6_director"]
-<<<<<<< Updated upstream
-=======
 [ext_resource type="PackedScene" path="res://DungeonGenerator/PixelPostProcess.tscn" id="7_pixel"]
->>>>>>> Stashed changes
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_7hprh"]
 seed = 2
@@ -74,11 +67,7 @@ edge_noise_frequency = 0.025
 pocket_frequency = 0.008
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_sdfbool"]
-<<<<<<< Updated upstream
-size = Vector3(12, 12, 34)
-=======
 size = Vector3(8.8, 7.0, 28)
->>>>>>> Stashed changes
 
 [node name="World" type="Node3D"]
 script = ExtResource("6_director")
@@ -98,12 +87,9 @@ script = ExtResource("2_gtg1g")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.6162802, 0.78752697, 0, -0.78752697, 0.6162802, 0, 0, 0)
-<<<<<<< Updated upstream
-=======
 layers = 3
 
 [node name="PixelPostProcess" parent="." instance=ExtResource("7_pixel")]
->>>>>>> Stashed changes
 
 [node name="Node" type="Node" parent="."]
 script = ExtResource("3_gtg1g")
@@ -133,14 +119,8 @@ size = Vector3(8.08, 9.294, 27.912)
 
 [node name="SDFBool" type="Area3D" parent="CaveSpawn"]
 script = ExtResource("5_sdfbool")
-<<<<<<< Updated upstream
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="CaveSpawn/SDFBool"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 9)
-=======
 carve_mode = 1
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CaveSpawn/SDFBool"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 8)
->>>>>>> Stashed changes
 shape = SubResource("BoxShape3D_sdfbool")

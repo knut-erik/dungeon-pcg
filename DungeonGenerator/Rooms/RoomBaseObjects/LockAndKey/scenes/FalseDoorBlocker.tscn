@@ -1,9 +1,3 @@
-<<<<<<< Updated upstream
-[gd_scene load_steps=2 format=3 uid="uid://djppgn2ks70wf"]
-
-[ext_resource type="Script" uid="uid://ba4uvq0opjatc" path="res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/FalseDoorBlocker.gd" id="1_jy83v"]
-
-=======
 [gd_scene load_steps=3 format=3 uid="uid://djppgn2ks70wf"]
 
 [ext_resource type="Script" uid="uid://ba4uvq0opjatc" path="res://DungeonGenerator/Rooms/RoomBaseObjects/LockAndKey/FalseDoorBlocker.gd" id="1_jy83v"]
@@ -11,17 +5,11 @@
 [sub_resource type="BoxShape3D" id="BoxShape3D_false_door"]
 size = Vector3(3.4, 3.4, 0.45)
 
->>>>>>> Stashed changes
 [node name="FalseDoorBlocker" type="Node3D"]
 script = ExtResource("1_jy83v")
 
 [node name="CSGBox3D" type="CSGBox3D" parent="."]
-<<<<<<< Updated upstream
-use_collision = true
 
-[node name="StaticBody3D" type="StaticBody3D" parent="."]
-editor_description = "Used for Raycast"
-=======
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.7, 0)
 size = Vector3(3.4, 3.4, 0.45)
 
@@ -31,4 +19,3 @@ editor_description = "Used for Raycast"
 [node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.7, 0)
 shape = SubResource("BoxShape3D_false_door")
->>>>>>> Stashed changes
